@@ -63,9 +63,9 @@ read.dta  <- function()
 }
 
 ###################################################N
-## create global variables for data & fied dimensions
+## create global variables for data & field dimensions
 out <- read.dta() ## maybe as.matrix(..)?? See if needed..
-y <-   out$y    ## log transf
+y <-   out$y    ## log transform
 Y  <-  out$Y    ## abs scale
 
 N <- dim(y)[1]*dim(y)[2]  # global var's
