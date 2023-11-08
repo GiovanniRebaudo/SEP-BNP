@@ -1,4 +1,4 @@
-# SE-BNP
+# SEP-BNP
 
 R codes for separately exchangeable Bayesian non-parametric model.
 
