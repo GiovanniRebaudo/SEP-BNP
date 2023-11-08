@@ -4,7 +4,12 @@
 # dir <- "~/pap/21/giovanni-exch/prog-qiao/"
 # setwd(dir)
 ###
-
+# Load relevant libraries, functions and data ----------------------------------
+rm(list=ls())
+# Set the working directory to the current folder 
+# Code to set the working directory to the current folder from RStudio
+library(rstudioapi) # version 0.15
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 library(DirichletReg)
 library(invgamma)

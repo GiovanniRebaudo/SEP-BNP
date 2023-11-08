@@ -21,30 +21,6 @@
 ##
 ###################################################
 
-## read in data
-read.dta  <- function(data_path="Dietswap_dataset.RDS")
-{##read-in and clean data
-  Dietswap_dataset <- readRDS(data_path)
-  
-  data = Dietswap_dataset[Dietswap_dataset$timepoint==1,]
-  data2=pivot_wider(data[,1:3],names_from = Sample,values_from = Abundance)
-  na_in_rows=sapply(1:dim(data2)[1],function(i) sum(data2[i,]==0))
-  data3=data.frame(data2[na_in_rows!=38,]) #remove all na rows
-  
-  
-  Y0=data3[,2:39]                ## separate OTU counts
-  rownames(Y0)=data3[,1]         ## and OTU names as row names..
-  
-  n <- dim(Y0)[2]                ## n patients
-  drop = apply(Y0==0,1,sum)>n/4  ## drop all OTUS with more than n/4 0's
-  Y  <- Y0[!drop,]               ## dropping 20 of the originally 119 OTU's
-  ## now total # 0's is only 5.
-  gammas=colMeans(Y)
-  Y=sapply(1:n,function(i) as.matrix(Y)[,i]/gammas[i])
-  y=log(Y+0.05)                  ## log transform (we only have 5 0's)
-  return(list(y=y,Y=Y)) ## return both - the log transf "y" and raw "Y"
-}
-
 ###################################################
 ## initializing pars for MC
 ## 
@@ -135,9 +111,10 @@ init.Mki <- function(mu,sig2,Sj,w)
 #######################################################
 ## evaluating log likelihood & posterior
 ## (for debugging, and for MH moves)
+##
 
 ll_fun <- function(mu,sig2,Sj,mki,w=NULL,pi=NULL,post=F){
-  ## log-likelihood check functions
+  ## loglikelihood check functions
   ## if post, then return log posterior (needs additional arg's)
   ll=0; lpr=0
   for(j in 1:n){
@@ -150,7 +127,13 @@ ll_fun <- function(mu,sig2,Sj,mki,w=NULL,pi=NULL,post=F){
   return(ll+lpr)
 }
 
-# Log prior
+## for debugging only -- keepin track of each factor in log posterior
+## in the two most recent (old, new) posterior evaluations 
+lpot = c("lik","mu","sig","Sj","mki","pi","w")
+lpo = matrix(0,nrow=2,ncol=length(lpot)) ## to save most recent 2 eval of log post
+colnames(lpo)=lpot
+rownames(lpo)=c("old","new")
+
 lprior  <- function(mu,sig2,Sj,mki,w,pi,ll)
 { # log prior; argument "ll" only for debugging..
   lpmu = sum( dnorm(mu, m=mu0, sd=sig0, log=T) )
@@ -179,7 +162,8 @@ lprior  <- function(mu,sig2,Sj,mki,w,pi,ll)
   return(lpr)
 }
 
-# Check for debugging
+
+
 check.ll <- function(txt,lastll,mu,sig2,Sj,mki,w=NULL, pi=NULL, post=F)
 {## for debugging - check if log posterior drops by
   ## more than 500 -- should never happen! (this is a bit *very* conservative
@@ -192,6 +176,9 @@ check.ll <- function(txt,lastll,mu,sig2,Sj,mki,w=NULL, pi=NULL, post=F)
   }
   return(ll)
 }
+
+
+
 
 #######################################################
 ## MCMC transition prob's 
@@ -209,6 +196,7 @@ Update_mu <- function(yl,nl,sig2_l){
   }
   return(mu)
 }
+
 
 Update_sig2 <- function(yl,nl,mu_l){
   ## =4. in the notes
@@ -335,6 +323,8 @@ dGkmv <- function(k,mu,sig2,Sj,w)
 
 ## *******************************************************
 
+
+
 update.Mki <- function(mu,sig2,Sj,w,mki)
 {  #update M_nik
   ## = item 2. in notes
@@ -399,6 +389,8 @@ lmy.Mki  <- function(ybk,sig2l)
   ly = lym+lm-lmy
   return(ly)
 }
+
+
 #######################################################
 ## mcmc
 
@@ -426,6 +418,7 @@ writeMCMC <- function(iter,pi,Sj,w,mki,mu,sig2,ll,pmki=rep(0,L),app=T)
   write(summ, "iter.txt", length(summ), append=app)
 }
 
+niter=500; iter=0
 mcmc  <- function(niter=1000, pi,w,Sj,mki,mu,sig2, niter0=500)
 {#### MCMC
   ## estimate Sj after niter0 iterations, and stop updating Sj
@@ -541,7 +534,7 @@ checkMki  <- function(mki, mki_expand, Sj)
 
 #######################################################
 ## main driver
-ex <- function(niter=2000,niter0=250, niter1=500){
+ex <- function(niter=2000, niter0=250, niter1=500){
   set.seed(1963)
   pi = init.pi()
   w = init.w()
@@ -553,7 +546,125 @@ ex <- function(niter=2000,niter0=250, niter1=500){
   
   Sj = mcmc(niter, pi=pi,w=w,Sj=Sj,mki=mki,mu=mu,sig2=sig2, niter0=niter0)
   klist = fig4(niter,niter0,niter1)
-  rcR(1,2)
+  # rcR(1,2)
   fig5(klist, niter,niter0,niter1)
-  
 } 
+
+#######################################################
+## make figures,  also called at the end of ex(),
+## but could be called separately
+
+niter=1000; niter0=250; niter1=750
+fig4  <- function(niter=NULL, niter0=NULL, niter1=NULL)
+{# create plots 4,5 & 6
+  ## Fig 4 ###############
+  SjMC  <- read.myfile("Sj.txt",n)
+  mu = read.myfile("mu.txt", L)
+  Sj  <- SjMC[nrow(SjMC),]
+  nk=sapply(1:K,function(k) sum(Sj==k))
+  K1 = sum(nk>1)
+  klist = which(nk>1)
+  s  <- apply(Y,1,sum)
+  idx <- order(s,decreasing=T)
+  kdx  <- which( nk>0 )
+  sk = matrix(0,nrow=K,ncol=B)
+  for (k in klist){ # non-empty clusters; clusters k=1,2,3
+    sk[k,] = apply(Y[,Sj==k],1,sum)
+  }
+  Sk = apply(sk,1,sum)
+  sk = sk/Sk
+  csk = apply(sk[,idx],1,cumsum) # cum sum for each k, OTU's ordered by total frequ
+  lwd = nk/max(nk)*3
+  matplot(1:B, csk[,klist],type="l", xlab="OTU", ylab="CUMSUM",lwd=lwd[klist],bty="l")
+  legend(60,0.6, col=klist,lty=klist,legend=klist,bty="n")
+  return(klist)
+}
+
+fig5 <- function(klist, niter=NULL, niter0=NULL, niter1=NULL)
+{## klist = list of subject clusters for which to plot nested clusters
+  ## get klist as return value from fig4()
+  ## prepares Fig 5 ##
+  mki2 <- read.myfile("mki.txt",K)
+  summ = read.myfile("iter.txt")
+  it = summ[,1]
+  col = brewer.pal(9, name="YlOrRd")
+  ## col = viridis(10)
+  
+  M  <- nrow(mki2)
+  M1 = which(it >= niter1)[1]
+  mki  <- array(0,dim=c(K,B,M))
+  for(m in 1:M)
+    for(b in 1:B)
+      mki[,b,m] = mki2[m, (b-1)*K+(1:K)]
+  
+  pk  <- array(0,dim=c(B,B,K))
+  for(k in klist){
+    for(m in M1:M)
+      for(b in 2:B)
+        for(b2 in 1:(b-1)){
+          pk[b,b2,k] = pk[b,b2,k]+(mki[k,b,m]==mki[k,b2,m])
+        }#k
+    pk[,,k] = pk[,,k]/(M-M1+1)
+    pk[,,k] = pk[,,k] + t(pk[,,k])
+    C = t(mki[k,,M1:M])
+    ck = salso(C)
+    idx = order(ck)
+    ## for plotting
+    pkp = (pk[,,k])
+    image(pkp[idx,idx])
+  }# k  
+}
+
+fmap = function(x)
+{
+  1/(1+exp(-20*(x-0.25)))
+}
+fn <- "w.txt"; p <- K; q  <-  L
+read.myfile  <- function(fn, p=NULL, q=NULL)
+{ # read matrix (q=NULL) or array (q>0)
+  X  <- as.matrix(read.table(fn))
+  if (!is.null(q)){ # read array
+    niter = nrow(X)/p
+    X2  <- array(c(X), dim=c(p,niter,q))
+    X <- X2
+  }
+  return(X)
+}
+
+
+
+plt.Gk  <- function(w,mu,sig2,add=F,Sj,M=100)
+{ ## plots current Gk
+  nk=sapply(1:K,function(k) sum(Sj==k))
+  xx <- seq(from=-3,to=3,length=M)
+  yy  <- matrix(0,nrow=K,ncol=M)
+  for(h in 1:K){
+    for(l in 1:L)
+      yy[h,]  <- yy[h,] + w[h,l]*dnorm(xx,m=mu[l],sd=sqrt(sig2[l]))
+  }
+  lwd = nk/max(nk)*3
+  if (!add){
+    matplot(xx,t(yy),bty="l",type="l",lwd=lwd)
+    legend(2,max(yy),legend=1:K,col=1:K,lty=1:K,bty="n",adj=1)
+  } else {
+    ## text(rep(xx[M],K), yy[,M], text=(1:K),adj=0)
+    matlines(xx, t(yy),type="l", lwd=lwd,col=1)
+  }
+}
+
+
+plt.Gkbar  <- function()
+{
+  w  <- read.myfile("w.txt",K,L) # w[k, iter, l]
+  niter  <- dim(w)[2]
+  pi <- read.myfile("pi.txt",K)
+  mu  <- read.myfile("mu.txt",L)
+  sig2  <- read.myfile("sig.txt",L)
+  Sj  <-  read.myfile("Sj.txt",K)
+  
+  ## clustering of patients
+  pij  <- matrix(0,n,n)
+  for(iter in 1:niter){
+    Sj1  <-  Sj[1,]
+  }
+}
