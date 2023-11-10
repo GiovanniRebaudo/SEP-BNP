@@ -292,7 +292,8 @@ update.SjMarg <- function(mu,sig2,Sj,pi,w)
 dGk <- function(y,mu,sig2,wk)
 {# evaluates *log* G_k(y), marginalizing mki, conditioning on mu,sig,w
   ## careful! THis is the marginal for p(y[j] | Sj=k,mu,sig2,pi)
-  ## but when margalizing wrt M[ik] the y[ij], j \in {j": S[j"]=k} become dependent!
+  ## but when margalizing wrt M[ik] the y[ij], j \in {j": S[j"]=k} 
+  # become dependent!
   pyl = dnorm(y, mu, sd=sqrt(sig2), log=F)
   py = sum(wk*pyl)
   lpy = log(py)
@@ -314,8 +315,8 @@ dGkmv <- function(k,mu,sig2,Sj,w)
       lpybl[l] = sum( dnorm(yk[b,], mu[l], sd=sqrt(sig2[l]), log=T) )
     }# l
     mx[b] = max(lpybl)
-    pyb = sum(w[k,]*exp(lpybl-mx[b]))  ## * e^mx
-    lpy=lpy+ log(pyb)
+    pyb   = sum(w[k,]*exp(lpybl-mx[b]))  ## * e^mx
+    lpy   = lpy+ log(pyb)
   }# b
   lpy = lpy + sum(mx)
   return(lpy)
