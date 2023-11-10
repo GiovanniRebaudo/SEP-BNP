@@ -140,6 +140,48 @@ P2 = ggplot(dfplot_am,aes(OTU,Abundace))+
 ggsave(plot=P2, file ="Image/normedcount-hist-am.pdf", 
        width=5, height=3.5, units = 'in')
 
+#######plot dendograms based on hierarchical clustering 
+colvar <- function(y){
+  return(sapply(1:dim(y)[2],function(j) var(y[,j])))
+}
+rowvar <- function(y){
+  return(sapply(1:dim(y)[1],function(i) var(y[i,])))
+}
+rvy=rowvar(y)
+yhc=y[order(rvy,decreasing = T)<=10,]
+rownames(yhc)=rownames(y)[order(rvy,decreasing = T)<=10]
+colnames(yhc)=data_label
+
+d <- dist(yhc, method = "euclidean")
+hc2 <- hclust(d, method = "complete" )
+plot(hc2,cex=0.5,main='')
+
+d <- dist(t(yhc), method = "euclidean")
+hc2 <- hclust(d, method = "complete" )
+plot(hc2,cex=0.5,main='')
+
+dend_expr <- as.dendrogram(hc2)
+tree_labels <- dendro_data(dend_expr, type = "rectangle")
+tree_labels$labels <- cbind(tree_labels$labels, Subject = as.factor(data_label2))
+
+P = ggplot() +
+  geom_segment(data =segment(tree_labels), aes(x=x, y=y, xend=xend, yend=yend))+
+  geom_segment(data = tree_labels$segments %>%
+                 filter(yend == 0) %>%
+                 left_join(tree_labels$labels, by = "x"), 
+               aes(x=x, y=y.x, xend=xend, yend=yend, color = Subject)) +
+  geom_text(data = label(tree_labels), 
+            aes(x=x, y=y, label=label, colour = Subject, hjust=-1), size=2) +
+  coord_flip() +
+  scale_y_reverse(expand=c(0.2, 0)) +
+  scale_colour_brewer(palette = "Dark2") + 
+  theme_dendro()+
+  theme(legend.title=element_blank())
+
+ggsave(plot=P, file ="Image/otu-subject-hc.pdf", 
+       width=5, height=3.5, units = 'in')
+
+
 # Plot
 w  <- read.myfile("w.txt",K,L) # w[k, iter, l]
 niter  <- dim(w)[2]
