@@ -453,9 +453,11 @@ mcmc  <- function(niter=1000, pi,w,Sj,mki,mu,sig2, niter0=500)
       yl= y[mki_expand==l]
       nl=sum(mki_expand==l)
       mu[l]=Update_mu(yl=yl,nl=nl,sig2_l=sig2[l])
-      last_ll=check.ll(paste("update_mu",l),last_ll, mu,sig2,Sj,mki,w,pi,post=T)
+      last_ll=check.ll(paste("update_mu",l),last_ll, 
+                       mu,sig2,Sj,mki,w,pi,post=T)
       sig2[l]=Update_sig2(yl=yl,nl=nl,mu_l=mu[l])
-      last_ll=check.ll(paste("update_Sig2",l),last_ll, mu,sig2,Sj,mki,w,pi,post=T)
+      last_ll=check.ll(paste("update_Sig2",l),
+                       last_ll, mu,sig2,Sj,mki,w,pi,post=T)
     } # l
     
     txt <- paste("it ",format(iter))
