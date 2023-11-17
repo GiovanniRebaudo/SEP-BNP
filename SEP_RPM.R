@@ -59,18 +59,18 @@ n <- dim(y)[2] # # patients
 B <- dim(y)[1] # # OTU's
 
 ##### max size of the subject (K) and OTU (L) partition
-K=10
-L=15
+K = 10
+L = 15
 ## hyperprior pars
-alpha= 1      ## for GEM prior on pi
-beta = 1      ## GEM prior on w[k], k = 1, ..., K
+alpha = 1      ## for GEM prior on pi
+beta  = 1      ## GEM prior on w[k], k = 1, ..., K
 
 ## hyperpars (use "empirical Bayes" i.e., match sample moments)
-mu0=mean(as.matrix(y))                  ## mu_l ~ N(mu0, sig0)
-sig0=3  ## SD!
+mu0  = mean(as.matrix(y))                  ## mu_l ~ N(mu0, sig0)
+sig0 = 3  ## SD!
 
-a0=3                                    ## sig2_l ~ Ga(a0/2, b0/2)
-b0=var(c(y))/4
+a0 = 3                                    ## sig2_l ~ Ga(a0/2, b0/2)
+b0 = var(c(y))/4
 
 source("SEP_fcts.R")
 
@@ -194,121 +194,156 @@ if(Run_MCMC){
 
 # Load output
 pi    <- read.myfile("pi.txt")
-Sj    <-  read.myfile("Sj.txt")
-w     <- read.myfile("w.txt",K,L) # w[k, iter, l]
-mki   <- read.myfile(c(mki), "mki.txt", K*B, append=app)
+Sj    <- read.myfile("Sj.txt")
+w     <- read.myfile("w.txt", K, L) # w[k, iter, l]
+mki   <- read.myfile("mki.txt", K, K*B)
+mu    <- read.myfile("mu.txt")
+sig2  <- read.myfile("sig.txt")
+# nk=sapply(1:K,function(k) sum(Sj==k))
+nk    <- read.myfile("nk.txt")
+# nl=sapply(1:L,function(l) sum(c(mki)==l))
+nl    <- read.myfile("nl.txt")
+ll    <- read.myfile("logl.txt")
+nkp   <- sum(nk>0)
+nlp   <- sum(nl>0)
+# summ  <- c(iter, nkp, nlp, nk, nl, ll, pmki)
+summ  <- read.myfile("iter.txt")
+
 niter <- dim(w)[2]
 
-mu  <- read.myfile("mu.txt")
-sig2  <- read.myfile("sig.txt",L)
+library(salso)
+point_SJ = salso::salso(Sj, nRuns = 100, maxZealousAttempts = 100, loss=VI())
 
-logl <-  read.myfile("logl.txt")
-logl <-  read.myfile("logl.txt")
+length(point_SJ)
 
-#
-write(pi, "pi.txt", K, append=app)
-write(Sj, "Sj.txt", n, append=app)
-write(c(w), "w.txt", L , append=app)
-write(c(mki), "mki.txt", K*B, append=app)
-write(mu, "mu.txt", L, append=app)
-write(sig2, "sig.txt", L, append=app)
-nk=sapply(1:K,function(k) sum(Sj==k))
-write(nk, "nk.txt", K, append=app)
-nl=sapply(1:L,function(l) sum(c(mki)==l))
-write(nl, "nl.txt", L, append=app)
-write(ll, "logl.txt", 1, append=app)
+# Gio's plot
+library(reshape2)
 
-## write summary of the iteration to "iter.txt"
-nk=sapply(1:K,function(k) sum(Sj==k))
-nl= sapply(1:L, function(l) sum(c(mki)==l))
-nkp=sum(nk>0)
-nlp=sum(nl>0)
-summ = c(iter, nkp, nlp, nk, nl, ll, pmki)
-write(summ, "iter.txt", length(summ), append=app)
+#ggplot needs a dataframe
+data <- as.data.frame(t(y))
+# #id variable for position in matrix 
+# data$id <- 1:nrow(data) 
+# data$sj <- point_SJ
+# #reshape to long format
+# plot_data <- melt(data,id.var="sj")
+
+
+#plot
+# Distributional clusters by OTU
+Dietswap_dataset <- readRDS("Data-and-Results/Dietswap_dataset.RDS")
+data = Dietswap_dataset[Dietswap_dataset$timepoint==1,]
+data2=pivot_wider(data[,1:3],names_from = Sample,values_from = Abundance)
+na_in_rows=sapply(1:dim(data2)[1],function(i) sum(data2[i,]==0))
+data3=data.frame(data2[na_in_rows!=38,]) #remove all na rows
+data=data3[,2:39]
+
+cluster_per_obs <- rep(point_SJ,nrow(data))
+LL <- apply(data,2,function(x) cumsum(sort((x),decreasing = T)) /sum((x)) )
+LL <- cbind(LL,point_SJ)
+LL2 <- reshape2::melt(LL)
+LL2 <- cbind(LL2,cluster_per_obs)
+LL2 <- as_tibble(LL2) %>% mutate(cluster_per_obs=paste0("SC-",cluster_per_obs))
+ggplot(LL2)+
+  geom_hline(yintercept = c(0,1),lty=3)+
+  geom_line(aes(x=Var1,y=value,group=Var2,col=as.factor(cluster_per_obs)),
+            lwd=.5,alpha=.2)+
+  geom_point(aes(x=Var1,y=value,group=Var2,col=as.factor(cluster_per_obs)),
+             lwd=1,alpha=.9)+
+  theme_bw()+scale_color_manual("Subject\nCluster", 
+                                values = c(2,4,1,6,5)) + ylim(0,1)+
+  ggtitle("CRF of microbiome subpopulations") +
+  xlab("Taxa sorted by count") + 
+  ylab("Cumulative Relative Frequncy")
+
+
+
+
+
 
 ##### check plotting log-likelihood, cluster y mean and weights
 par(mar=c(2,2,1,1))
-plot(logl[-1],type='l')
+plot(ll[-1],type='l')
 
-par(mar=c(2,2,1,1))
-par(mfrow=c(3,1))
-hist(mik_store[T,1,])
-hist(mik_store[T,2,])
-hist(mik_store[T,3,])
-par(mfrow=c(1,1))
+# par(mar=c(2,2,1,1))
+# par(mfrow=c(3,1))
+# hist(mki[T,1,])
+# hist(mki[T,2,])
+# hist(mki[T,3,])
+# par(mfrow=c(1,1))
 
-plot(rowMeans(y[,Sj0==1]),type='l')
-lines(rowMeans(y[,Sj0==2]),col='red')
-lines(rowMeans(y[,Sj0==4]),col='blue')
+# plot( rowMeans(y[, Sj0==1]), type='l')
+# lines(rowMeans(y[, Sj0==2]), col='red')
+# lines(rowMeans(y[, Sj0==4]), col='blue')
 
-y1=y[order(rowSums(y),decreasing = T),]
-y_s1=as.matrix(y1[,Sj==1])
-y_s2=as.matrix(y1[,Sj==2])
-y_s3=as.matrix(y1[,Sj==3])
-
-par(mfrow=c(1,1))
-plot(rowMeans(y_s1),type='l',xlab='OTU 1-120',ylab='Abundance',cex.lab=0.6,cex.axis=0.6)
-lines(rowMeans(y_s2),type='l',col='red')
-lines(rowMeans(y_s3),type='l',col='red')
+y1   = y[order(rowSums(y),decreasing = T),]
+y_s1 = as.matrix(y1[, point_SJ==1])
+y_s2 = as.matrix(y1[, point_SJ==2])
+y_s3 = as.matrix(y1[, point_SJ==3])
+# 
+# par(mfrow=c(1,1))
+# plot(rowMeans(y_s1),type='l',xlab='OTU 1-120',ylab='Abundance',cex.lab=0.6,cex.axis=0.6)
+# lines(rowMeans(y_s2),type='l',col='red')
+# lines(rowMeans(y_s3),type='l',col='blue')
 
 pdf_s1=rowSums(y_s1)/sum(rowSums(y_s1))
 pdf_s2=rowSums(y_s2)/sum(rowSums(y_s2))
 pdf_s3=rowSums(y_s3)/sum(rowSums(y_s3))
 
-plot(c(0,cumsum(pdf_s1)),type='l',ylim=c(0,1),xlim=c(0,120),xlab='OTU',ylab="CDF of Relative Abundance")
-lines(c(0,cumsum(pdf_s2)),type='l',col='red')
-lines(c(0,cumsum(pdf_s3)),type='l',col='blue')
+# plot(c(0,cumsum(pdf_s1)),type='l',ylim=c(0,1),xlim=c(0,120),xlab='OTU',ylab="CDF of Relative Abundance")
+# lines(c(0,cumsum(pdf_s2)),type='l',col='red')
+# lines(c(0,cumsum(pdf_s3)),type='l',col='blue')
 
 ### plot according to country label
-data_country=pivot_wider(data[,c(1:2,6)],names_from = Sample,values_from = nationality)
-data_country=data_country[1,2:dim(data_country)[2]]
+# data_country=pivot_wider(data[,c(1:2,6)],names_from = Sample,values_from = nationality)
+# data_country=data_country[1,2:dim(data_country)[2]]
 
-y_af=as.matrix(y1[,data_country=='AFR'])
-y_am=as.matrix(y1[,data_country=='AAM'])
+# y_af=as.matrix(y1[,data_country=='AFR'])
+# y_am=as.matrix(y1[,data_country=='AAM'])
 
-as.matrix(data_country[Sj==1])[1,]
-as.matrix(data_country[Sj==2])[1,]
-as.matrix(data_country[Sj==3])[1,]
+# as.matrix(data_country[point_SJ==1])[1,]
+# as.matrix(data_country[point_SJ==2])[1,]
+# as.matrix(data_country[point_SJ==3])[1,]
 
-pdf_af=rowSums(y_af)/sum(rowSums(y_af))
-pdf_am=rowSums(y_am)/sum(rowSums(y_am))
+# pdf_af=rowSums(y_af)/sum(rowSums(y_af))
+# pdf_am=rowSums(y_am)/sum(rowSums(y_am))
+# 
+# plot(c(0,cumsum(pdf_af)),type='l',ylim=c(0,1),xlim=c(0,120),xlab='OTU',ylab="CDF of Relative Abundance")
+# lines(c(0,cumsum(pdf_am)),type='l',col='red')
 
-plot(c(0,cumsum(pdf_af)),type='l',ylim=c(0,1),xlim=c(0,120),xlab='OTU',ylab="CDF of Relative Abundance")
-lines(c(0,cumsum(pdf_am)),type='l',col='red')
 
+# mik[1,order(rowSums(y),decreasing = T)]
+# mik[2,order(rowSums(y),decreasing = T)]
+# mik[3,order(rowSums(y),decreasing = T)]
+# w[T,1,]
+# w[T,2,]
+# w[T,3,]
 
-mik_store[T,1,order(rowSums(y),decreasing = T)]
-mik_store[T,2,order(rowSums(y),decreasing = T)]
-mik_store[T,3,order(rowSums(y),decreasing = T)]
-w_store[T,1,]
-w_store[T,2,]
-w_store[T,3,]
-
-w1_ave=sapply(1:L,function(i) w_store[T,1,i]/sum(mik_store[T,1,]==i))
-mik1_plot=w1_ave[mik_store[T,1,order(rowSums(y),decreasing = T)]]
-
-w2_ave=sapply(1:L,function(i) w_store[T,2,i]/sum(mik_store[T,2,]==i))
-mik2_plot=w2_ave[mik_store[T,2,order(rowSums(y),decreasing = T)]]
-
-w3_ave=sapply(1:L,function(i) w_store[T,3,i]/sum(mik_store[T,3,]==i))
-mik3_plot=w3_ave[mik_store[T,3,order(rowSums(y),decreasing = T)]]
-
-plot(cumsum(mik1_plot),type='l')
-lines(cumsum(mik2_plot),type='l',col='red')
-lines(cumsum(mik3_plot),type='l',col='blue')
+# w1_ave=sapply(1:L,function(i) w_store[T,1,i]/sum(mki[T,1,]==i))
+# mik1_plot=w1_ave[mki[T,1,order(rowSums(y),decreasing = T)]]
+# 
+# w2_ave=sapply(1:L,function(i) w_store[T,2,i]/sum(mki[T,2,]==i))
+# mik2_plot=w2_ave[mki[T,2,order(rowSums(y),decreasing = T)]]
+# 
+# w3_ave=sapply(1:L,function(i) w_store[T,3,i]/sum(mki[T,3,]==i))
+# mik3_plot=w3_ave[mki[T,3,order(rowSums(y),decreasing = T)]]
+# 
+# plot(cumsum(mik1_plot),type='l')
+# lines(cumsum(mik2_plot),type='l',col='red')
+# lines(cumsum(mik3_plot),type='l',col='blue')
 
 
 ###### Do David Dahl 
-idx=1:T
-idx2=idx[idx>7500]
-TT=length(idx2)
+# idx=1:T
+# idx2=idx[idx>7500]
+# TT=length(idx2)
 
 #one_pos means positions of 1s, it is to save space for the binary matrix
 one_pos=list()
 
+TT = niter
 for(tt in 1:TT){
   ii=idx2[tt]
-  s_temp=S_store[[ii]]
+  s_temp=Sj[ii]
   cl_temp=unique(s_temp)
   s_mat_temp=matrix(0,n,n)
   for(ss in cl_temp){
@@ -340,9 +375,9 @@ which.min(hem_dist)
 ### from the cluster assignmebt and iteration picked from result above, 
 ### do David Dahl for the nested partitions
 idx_star=idx2[which.min(hem_dist)]
-s_star=S_store[idx_star,]
+s_star=Sj[idx_star,]
 
-idx_star_all=idx[sapply(1:T, function(i) sum(S_store[i,]==s_star)==n)]
+idx_star_all=idx[sapply(1:T, function(i) sum(Sj[i,]==s_star)==n)]
 idx_star_m=idx_star_all[idx_star_all>8000]
 TT=length(idx_star_m)
 one_pos_m1=list()
@@ -351,7 +386,7 @@ one_pos_m3=list()
 
 for(tt in 1:TT){
   ii=idx_star_m[tt]
-  s_temp=mik_store[ii,1,]
+  s_temp=mki[ii,1,]
   cl_temp=unique(s_temp)
   s_mat_temp=matrix(0,B,B)
   for(ss in cl_temp){
@@ -360,7 +395,7 @@ for(tt in 1:TT){
   svec=s_mat_temp[lower.tri(s_mat_temp,diag = F)]
   one_pos_m1[[tt]]=which(svec==1)
   
-  s_temp=mik_store[ii,2,]
+  s_temp=mki[ii,2,]
   cl_temp=unique(s_temp)
   s_mat_temp=matrix(0,B,B)
   for(ss in cl_temp){
@@ -369,7 +404,7 @@ for(tt in 1:TT){
   svec=s_mat_temp[lower.tri(s_mat_temp,diag = F)]
   one_pos_m2[[tt]]=which(svec==1)
   
-  s_temp=mik_store[ii,3,]
+  s_temp=mki[ii,3,]
   cl_temp=unique(s_temp)
   s_mat_temp=matrix(0,B,B)
   for(ss in cl_temp){
@@ -429,9 +464,9 @@ which.min(hem_dist_m3)
 
 ####### form the cluster assignment, plot pdfs
 mik_star=matrix(0,3,B)
-mik_star[1,]=mik_store[idx_star_m[which.min(hem_dist_m1)],1,]
-mik_star[2,]=mik_store[idx_star_m[which.min(hem_dist_m2)],2,]
-mik_star[3,]=mik_store[idx_star_m[which.min(hem_dist_m3)],3,]
+mik_star[1,]=mki[idx_star_m[which.min(hem_dist_m1)],1,]
+mik_star[2,]=mki[idx_star_m[which.min(hem_dist_m2)],2,]
+mik_star[3,]=mki[idx_star_m[which.min(hem_dist_m3)],3,]
 
 
 y_s1=as.matrix(y1[,s_star==1])

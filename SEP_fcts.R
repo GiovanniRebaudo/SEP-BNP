@@ -420,7 +420,7 @@ writeMCMC <- function(iter,pi,Sj,w,mki,mu,sig2,ll,pmki=rep(0,L),app=T)
 }
 
 niter=500; iter=0
-mcmc  <- function(niter=1000, pi,w,Sj,mki,mu,sig2, niter0=500)
+mcmc  <- function(niter=1000, pi, w, Sj, mki, mu, sig2, niter0=500)
 {#### MCMC
   ## estimate Sj after niter0 iterations, and stop updating Sj
   last_ll=check.ll("update_w", lastll= -1e10, mu,sig2,Sj,mki,w,pi,post=T)-100000
@@ -458,19 +458,18 @@ mcmc  <- function(niter=1000, pi,w,Sj,mki,mu,sig2, niter0=500)
       sig2[l]=Update_sig2(yl=yl,nl=nl,mu_l=mu[l])
       last_ll=check.ll(paste("update_Sig2",l),
                        last_ll, mu,sig2,Sj,mki,w,pi,post=T)
-    } # l
-    
+    } #
     txt <- paste("it ",format(iter))
     last_ll=check.ll(txt, last_ll, mu=mu,sig2=sig2,Sj=Sj,mki=mki,w,pi,post=T)
     if (iter %% 10 == 0){ # save every 10th iter
       pmki = nmki/Nmki
-      writeMCMC(iter, pi,Sj,w,mki,mu,sig2=sig2, ll=last_ll,pmki=pmki)
-      plt.Gk(w,mu,sig2,add,Sj)
+      writeMCMC(iter, pi, Sj, w, mki, mu, sig2=sig2, ll=last_ll, pmki=pmki)
+      plt.Gk(w, mu, sig2, add, Sj)
       add=F
+      print(iter)
     }
-    print(iter)
-    if (iter< niter0)
-      SjMC = rbind(SjMC,Sj) # for next step...
+    if (iter < niter0)
+      SjMC = rbind(SjMC, Sj) # for next step...
     if (iter==niter0){ # estimate Sj
       Sj = salso(SjMC)
       cat("\n Fixing Sj using 'salso'.\n")
@@ -557,7 +556,7 @@ ex <- function(niter=2000, niter0=250, niter1=500){
 ## make figures,  also called at the end of ex(),
 ## but could be called separately
 
-niter=1000; niter0=250; niter1=750
+niter = 1000; niter0 = 250; niter1 = 750
 fig4  <- function(niter=NULL, niter0=NULL, niter1=NULL)
 {# create plots 4,5 & 6
   ## Fig 4 ###############
@@ -568,18 +567,20 @@ fig4  <- function(niter=NULL, niter0=NULL, niter1=NULL)
   K1 = sum(nk>1)
   klist = which(nk>1)
   s  <- apply(Y,1,sum)
-  idx <- order(s,decreasing=T)
+  idx <- order(s, decreasing=T)
   kdx  <- which( nk>0 )
-  sk = matrix(0,nrow=K,ncol=B)
+  sk = matrix(0, nrow=K, ncol=B)
   for (k in klist){ # non-empty clusters; clusters k=1,2,3
-    sk[k,] = apply(Y[,Sj==k],1,sum)
+    sk[k,] = apply(Y[,Sj==k], 1, sum)
   }
-  Sk = apply(sk,1,sum)
+  Sk = apply(sk, 1, sum)
   sk = sk/Sk
-  csk = apply(sk[,idx],1,cumsum) # cum sum for each k, OTU's ordered by total frequ
+  csk = apply(sk[,idx], 1, cumsum) 
+  # cum sum for each k, OTU's ordered by total frequ
   lwd = nk/max(nk)*3
-  matplot(1:B, csk[,klist],type="l", xlab="OTU", ylab="CUMSUM",lwd=lwd[klist],bty="l")
-  legend(60,0.6, col=klist,lty=klist,legend=klist,bty="n")
+  matplot(1:B, csk[,klist], type="l", xlab="OTU", ylab="CUMSUM",
+          lwd=lwd[klist], bty="l")
+  legend(60, 0.6, col=klist, lty=klist, legend=klist, bty="n")
   return(klist)
 }
 
