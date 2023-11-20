@@ -54,9 +54,9 @@ out <- read.dta() ## maybe as.matrix(..)?? See if needed..
 y <-   out$y    ## log transf
 Y  <-  out$Y    ## abs scale
 
-N <- dim(y)[1]*dim(y)[2]  # global var's
-n <- dim(y)[2] # # patients
-B <- dim(y)[1] # # OTU's
+N <- dim(y)[1]*dim(y)[2]  # global var's (I*J in the paper)
+n <- dim(y)[2] # # patients (J in the paper)
+B <- dim(y)[1] # # OTU's (I in the paper)
 
 ##### max size of the subject (K) and OTU (L) partition
 K = 10
@@ -275,12 +275,62 @@ point_SJ = salso::salso(Sj, nRuns = 100, maxZealousAttempts = 100, loss=VI())
 
 salso::salso(Sj, nRuns = 100, maxZealousAttempts = 100, loss=VI())
 
-# pdf("heatmap.pdf",width=8,height=3)
-par(mfrow=c(1,3))
-heatmap(data[order(mki[1,]), point_SJ==1], Colv = NA, Rowv = NA)
-heatmap(data[order(mki[2,]), point_SJ==2], Colv = NA, Rowv = NA)
-heatmap(data[order(mki[3,]), point_SJ==3], Colv = NA, Rowv = NA)
-# dev.off()
+# Questions: mki
+hist(Sj)
+dim(mki)
+length(unique(mki))
+
+
+# First cluster of subjects
+PSM1 = psm(mki[1,,-(1:90)])
+PSM2 = psm(mki[2,,-(1:90)])
+PSM3 = psm(mki[3,,-(1:90)])
+
+# Reorder rows and columns (observations) of a dissimilarity matrix intra groups 
+# and possibly reorder also the groups (batch of observations)
+reorder_dismat <-  function(dismat, groups, order.groups=NULL){
+  # Use correlation between variables as distance
+  order.dis   = integer(0)
+  J           = length(unique(groups))
+  if(is.null(order.groups)){
+    order.j   = 1:J
+  } else {
+    order.j   = order.groups
+  }
+  for (j in order.j){
+    groups.j  = which(groups==j)
+    dd        = as.dist((1-dismat[groups.j, groups.j])/2)
+    hc        = hclust(dd)
+    order.dis = c(order.dis, hc$order+length(order.dis))
+  }
+  dismat      = dismat[order.dis, order.dis]
+  dismat      = dismat[nrow(dismat):1,]
+}
+
+## Function to plot the heatmap of the posterior probabilities of co-clustering
+## of obs assigned to vertices
+Plot_heat <- function(dissimlar_stable = dissimlar_stable,
+                             I          = B){
+  dismat      = round(dissimlar_stable,2)
+  dismat      = reorder_dismat(dismat,groups=rep(1,I))
+  plot_dismat = reshape2::melt(dismat)
+  ggplot(data=plot_dismat, aes(x=factor(Var1), y=factor(Var2), fill=value))+ 
+    geom_tile()+ theme_bw()+ 
+    scale_y_discrete(breaks = floor(seq(1,I,length.out = 9)), 
+                     labels = floor(seq(1,I,length.out = 9))) +
+    scale_x_discrete(breaks = floor(seq(1,I,length.out = 9)), 
+                     labels = floor(seq(1,I,length.out = 9))) +
+    xlab("OTU")+ylab("OTU")+
+    scale_fill_gradientn(colours = c("white", "yellow", "red"), 
+                         values = rescale(c(0,0.25,1)), space = "Lab", name="")+
+    theme(legend.position = "right", text = element_text(size=20))
+}
+
+P1 = Plot_heat(PSM1, B)
+P2 = Plot_heat(PSM2, B)
+P3 = Plot_heat(PSM3, B)
+
+
 
 pdf("heatmap1.pdf",width=4,height=3)
 heatmap(y[od1,s_star==1],Colv = NA, Rowv = NA)
