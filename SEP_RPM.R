@@ -196,7 +196,7 @@ if(Run_MCMC){
 pi    <- read.myfile("pi.txt")
 Sj    <- read.myfile("Sj.txt")
 w     <- read.myfile("w.txt", K, L) # w[k, iter, l]
-mki   <- read.myfile("mki.txt", K, K*B)
+mki   <- read.myfile("mki.txt", K)
 mu    <- read.myfile("mu.txt")
 sig2  <- read.myfile("sig.txt")
 # nk=sapply(1:K,function(k) sum(Sj==k))
@@ -258,33 +258,34 @@ ggsave(plot=P, file="Image/Sjclustergg2.pdf", height = 2.5, width = 4)
 
 #### Plot heatmaps
 
-# data_country=pivot_wider(data[,c(1:2,6)], 
-#                          names_from = Sample, values_from = nationality)
-# data_country=data_country[1,2:dim(data_country)[2]]
-# 
-# 
-# y[order(mik_star[1,]), point_SJ==1]
-# y[order(mik_star[2,]), point_SJ==2]
-# y[order(mik_star[3,]), point_SJ==3]
-# 
-# od1=unlist(sapply(1:8,function (i) which(mik_star[1,]==i)))
-# od2=unlist(sapply(1:8,function (i) which(mik_star[2,]==i)))
-# od3=unlist(sapply(1:8,function (i) which(mik_star[3,]==i)))
-
 point_SJ = salso::salso(Sj, nRuns = 100, maxZealousAttempts = 100, loss=VI())
 
 salso::salso(Sj, nRuns = 100, maxZealousAttempts = 100, loss=VI())
 
-# Questions: mki
-hist(Sj)
-dim(mki)
-length(unique(mki))
+# TBD mki to be corrected
+niter  = 1e4 #iteration MCMC
+niter0 = 1e3 # estimating Sj after niter0 iterations and stop updating Sj
+niter1 = 2e3 # just for plot 
+mki_all <- read.myfile("mki.txt",K)
+summ = read.myfile("iter.txt")
+it = summ[,1]
+col = brewer.pal(9, name="YlOrRd")
+## col = viridis(10)
 
+M  <- nrow(mki_all)
+M1 = which(it >= niter1)[1]
+mki  <- array(0,dim=c(K,B,length(M1:M)))
+for(m in M1:M){
+  for(b in 1:B){
+    mki[,b,m] = mki_all[m, (b-1)*K+(1:K)]
+  }
+}
 
-# First cluster of subjects
-PSM1 = psm(mki[1,,-(1:90)])
-PSM2 = psm(mki[2,,-(1:90)])
-PSM3 = psm(mki[3,,-(1:90)])
+if(F){
+  PSM1 = psm(mki[1,,])
+  PSM2 = psm(mki[2,,])
+  PSM3 = psm(mki[3,,])
+}
 
 # Reorder rows and columns (observations) of a dissimilarity matrix intra groups 
 # and possibly reorder also the groups (batch of observations)
@@ -322,15 +323,58 @@ Plot_heat <- function(dissimlar_stable = dissimlar_stable,
                      labels = floor(seq(1,I,length.out = 9))) +
     xlab("OTU")+ylab("OTU")+
     scale_fill_gradientn(colours = c("white", "yellow", "red"), 
-                         values = rescale(c(0,0.25,1)), space = "Lab", name="")+
+                         values = rescale(c(0,0.5,1)), space = "Lab", name="")+
     theme(legend.position = "right", text = element_text(size=20))
 }
 
-P1 = Plot_heat(PSM1, B)
-P2 = Plot_heat(PSM2, B)
-P3 = Plot_heat(PSM3, B)
+P1 = Plot_heat(PSM1, B) + xlab("") + theme(legend.position="none")
+P2 = Plot_heat(PSM2, B) + ylab("") + theme(legend.position="none")
+P3 = Plot_heat(PSM3, B) + xlab("") + ylab("")
 
+library(ggpubr)
 
+PHeat <- ggarrange(P1, P2, P3, labels = c("1", "2", "3"), nrow=1,
+                   widths = c(1, 1, 1.3))
+
+ggsave(plot=PHeat, file="Image/mik_coclusterprob_sorted2.pdf", 
+       width=15, height=4.5)
+
+ggsave(file="Image/prova3.pdf", 
+       width=5, height=4.5)
+
+Point_Mki1 = salso::salso(mki[1,,-(1:90)], nRuns = 100, 
+                          maxZealousAttempts = 100, loss=VI())
+Point_Mki2 = salso::salso(mki[2,,-(1:90)], nRuns = 100, 
+                          maxZealousAttempts = 100, loss=VI())
+Point_Mki3 = salso::salso(mki[3,,-(1:90)], nRuns = 100, 
+                          maxZealousAttempts = 100, loss=VI())
+
+fig5(list(1,2,3), 
+     niter  = 1e4, #iteration MCMC
+     niter0 = 1e3, # estimating Sj after niter0 iterations and stop updating Sj
+     niter1 = 2e3 # just for plot 
+)
+
+fig4(
+     niter  = 1e4, #iteration MCMC
+     niter0 = 1e3, # estimating Sj after niter0 iterations and stop updating Sj
+     niter1 = 2e3 # just for plot 
+)
+
+y[order(Point_Mki1), point_SJ==1]
+y[order(Point_Mki2), point_SJ==2]
+y[order(Point_Mki3), point_SJ==3]
+
+od1=unlist(sapply(1:8,function (i) which(Point_Mki1==i)))
+od2=unlist(sapply(1:8,function (i) which(Point_Mki2==i)))
+od3=unlist(sapply(1:8,function (i) which(Point_Mki3==i)))
+
+pdf("heatmap.pdf",width=8,height=3)
+par(mfrow=c(1,3))
+heatmap(y[order(Point_Mki1),point_SJ==1],Colv = NA, Rowv = NA)
+heatmap(y[order(Point_Mki2),point_SJ==2],Colv = NA, Rowv = NA)
+heatmap(y[order(Point_Mki3),point_SJ==3],Colv = NA, Rowv = NA)
+dev.off()
 
 pdf("heatmap1.pdf",width=4,height=3)
 heatmap(y[od1,s_star==1],Colv = NA, Rowv = NA)
@@ -351,37 +395,30 @@ heatmap(y[,s_star==3],Colv = NA, Rowv = NA)
 
 
 charOTU <- function(s1,s2){
-  idx   <- sort(abs(rowMeans(y[,s_star==s1])-rowMeans(y[,s_star==s2])), 
-           decreasing=TRUE, index.return=T)$ix
-  names <- c(rownames(y)[idx==1], rownames(y)[idx==2], rownames(y)[idx==3])
+  idx=sort(abs(rowMeans(y[,s_star==s1])-rowMeans(y[,s_star==s2])),decreasing=TRUE,index.return=T)$ix
+  names=c(rownames(y)[idx==1],rownames(y)[idx==2],rownames(y)[idx==3])
   return(names)
 }
 charOTU(1,2)
 charOTU(1,3)
 charOTU(2,3)
 
-Z=log(y[order(mik_star[3,]),s_star==3])
-
-Zmelt <- reshape2::melt(Z)
-glimpse(Zmelt)
-
-ggplot(Zmelt,aes(Var2,Var1,fill=value)) +
-  geom_raster() +
-  scale_fill_viridis_c()
+Z=y[order(rowSums(y),decreasing = T),]
 
 Zmelts <- rbind(
-  reshape2::melt(log(y[od1,s_star==1])) %>%
-    mutate(s_star = "1"),
-  reshape2::melt(log(y[od2,s_star==2])) %>%
-    mutate(s_star = "2"),
-  reshape2::melt(log(y[od3,s_star==3])) %>%
-    mutate(s_star = "3")
+  reshape2::melt(Z[,point_SJ==1]) %>%
+    mutate(point_SJ = "1"),
+  reshape2::melt(Z[,point_SJ==2]) %>%
+    mutate(point_SJ = "2") #,
+  # reshape2::melt(Z[,point_SJ==3]) %>%
+  #   mutate(point_SJ = "3")
 )
+Zmelts$Var1 = as.factor(as.integer(Zmelts$Var1))
 
-ggplot(Zmelts,aes(Var2,Var1,fill=value)) +
+P = ggplot(Zmelts,aes(Var2,Var1,fill=value)) +
   geom_raster() +
-  facet_wrap(~s_star)+
+  facet_wrap(~point_SJ)+
   scale_fill_viridis_c()
 
-
+ggsave(plot=P, file="Image/mb-heatmap-y2.pdf", height = 5, width = 15)    
 
