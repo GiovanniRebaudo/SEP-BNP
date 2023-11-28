@@ -62,13 +62,17 @@ init.muSig <- function()
 {### initialize mu,sig with cluster-specific moments using the
   ### clusters under k-means (for OTU's!! Not for subjects)
   ydf <- data.frame(y)
-  km  <- kmeans(ydf, centers=L, iter.max = 100, nstart = 1)  ## use k-means for initial clustering of OTU's
+  km  <- kmeans(ydf, centers=L, iter.max = 100, nstart = 10)  ## use k-means for initial clustering of OTU's
   ydf %>% mutate(cluster = km$cluster) -> ydf
   mu=rep(0,L)
   sig2=rep(0,L)
   for(l in 1:L){
-    mu[l]= mean(as.matrix(ydf[ydf$cluster == l, ]%>% select(-cluster)))
-    sig2[l]= var(as.vector( as.matrix(ydf[ydf$cluster == l, ]%>% select(-cluster))))
+    mu[l]= mean(as.matrix( 
+      ydf[ydf$cluster == l, ] %>% dplyr::select(-cluster)
+      ))
+    sig2[l]= var(as.vector( 
+      as.matrix(ydf[ydf$cluster == l, ]%>% dplyr::select(-cluster))
+      ))
   }
   ## sig2=rep(var(as.vector(as.matrix(ydf[ydf$cluster == which.max(table(ydf$cluster)), ]%>% select(-cluster)))),L) 
   return(list(mu=mu,sig2=sig2))
@@ -537,7 +541,7 @@ checkMki  <- function(mki, mki_expand, Sj)
 #######################################################
 ## main driver
 ex <- function(niter=2000, niter0=250, niter1=500){
-  set.seed(1963)
+  set.seed(1992)
   pi = init.pi()
   w = init.w()
   Sj = init.Sj(3)
@@ -671,4 +675,45 @@ plt.Gkbar  <- function()
   for(iter in 1:niter){
     Sj1  <-  Sj[1,]
   }
+}
+
+# Reorder rows and columns (observations) of a dissimilarity matrix intra groups 
+# and possibly reorder also the groups (batch of observations)
+reorder_dismat <-  function(dismat, groups, order.groups=NULL){
+  # Use correlation between variables as distance
+  order.dis   = integer(0)
+  J           = length(unique(groups))
+  if(is.null(order.groups)){
+    order.j   = 1:J
+  } else {
+    order.j   = order.groups
+  }
+  for (j in order.j){
+    groups.j  = which(groups==j)
+    dd        = as.dist((1-dismat[groups.j, groups.j])/2)
+    hc        = hclust(dd)
+    order.dis = c(order.dis, hc$order+length(order.dis))
+  }
+  dismat      = dismat[order.dis, order.dis]
+  dismat      = dismat[nrow(dismat):1,]
+}
+
+## Function to plot the heatmap of the posterior probabilities of co-clustering
+## of obs assigned to vertices
+Plot_heat <- function(dissimlar_stable = dissimlar_stable,
+                      I          = B){
+  dismat      = round(dissimlar_stable, 2)
+  dismat      = reorder_dismat(dismat,groups=rep(1,I))
+  plot_dismat = reshape2::melt(dismat)
+  ggplot(data=plot_dismat, aes(x=factor(Var1), y=factor(Var2), fill=value)) + 
+    geom_tile()+ theme_bw()+ 
+    scale_y_discrete(breaks = floor(seq(1, I, length.out = 9)), 
+                     labels = floor(seq(1, I, length.out = 9))) +
+    scale_x_discrete(breaks = floor(seq(1, I, length.out = 9)), 
+                     labels = floor(seq(1, I, length.out = 9))) +
+    xlab("OTU") + ylab("OTU") +
+    scale_fill_gradientn(colours = c("white", "yellow", "red"), 
+                         values = rescale(c(0, 0.5, 1)), 
+                         space = "Lab", name="") +
+    theme(legend.position = "right", text = element_text(size=20))
 }

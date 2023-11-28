@@ -20,6 +20,9 @@ library(ggplot2)
 theme_set(theme_bw(base_size = 14))
 library(RColorBrewer)
 library(salso)
+library(ggpubr)
+library(salso)
+library(reshape2)
 
 
 ###################################################N
@@ -40,10 +43,15 @@ read.dta  <- function()
   Y0=data3[,2:39]                ## separate OTU counts
   rownames(Y0)=data3[,1]         ## and OTU names as row names..
   
-  n <- dim(Y0)[2]                ## n patients
-  drop = apply(Y0==0,1,sum)>n/4  ## drop all OTUS with more than n/4 0's
-  Y  <- Y0[!drop,]               ## dropping 20 of the originally 119 OTU's
-  ## now total # 0's is only 5.
+  n <- dim(Y0)[2]                ## n patients (J in the paper's notation)
+  remove_sparse = F
+  if(remove_sparse){
+    drop = apply(Y0==0,1,sum)>n/4  ## drop all OTUS with more than n/4 0's
+    Y  <- Y0[!drop,]               ## dropping 20 of the originally 119 OTU's
+    ## now total # 0's is only 5.
+  } else {
+    Y  <- Y0
+  }
   gammas=colMeans(Y)
   Y=sapply(1:n,function(i) as.matrix(Y)[,i]/gammas[i])
   y=log(Y+0.05)                  ## log transform (we only have 5 0's)
@@ -189,7 +197,7 @@ if(Run_MCMC){
   ex(niter  = 1e4, #iteration MCMC
      niter0 = 1e3, # estimating Sj after niter0 iterations and stop updating Sj
      niter1 = 2e3 # just for plot 
-  )
+  ) 
 }
 
 # Load output
@@ -210,22 +218,7 @@ nlp   <- sum(nl>0)
 summ  <- read.myfile("iter.txt")
 
 niter <- dim(w)[2]
-
-library(salso)
 point_SJ = salso::salso(Sj, nRuns = 100, maxZealousAttempts = 100, loss=VI())
-
-length(point_SJ)
-
-# Gio's plot
-library(reshape2)
-
-#ggplot needs a dataframe
-data <- as.data.frame(t(y))
-# #id variable for position in matrix 
-# data$id <- 1:nrow(data) 
-# data$sj <- point_SJ
-# #reshape to long format
-# plot_data <- melt(data,id.var="sj")
 
 
 #plot
@@ -257,10 +250,10 @@ P = ggplot(LL2)+
 ggsave(plot=P, file="Image/Sjclustergg2.pdf", height = 2.5, width = 4)    
 
 #### Plot heatmaps
-
 point_SJ = salso::salso(Sj, nRuns = 100, maxZealousAttempts = 100, loss=VI())
-
-salso::salso(Sj, nRuns = 100, maxZealousAttempts = 100, loss=VI())
+if(length(unique(point_SJ))!=3){ 
+  print("Adapt plot code for number of clusters different than 3")
+  stop()}
 
 # TBD mki to be corrected
 niter  = 1e4 #iteration MCMC
@@ -275,55 +268,34 @@ col = brewer.pal(9, name="YlOrRd")
 M  <- nrow(mki_all)
 M1 = which(it >= niter1)[1]
 mki  <- array(0,dim=c(K,B,length(M1:M)))
+idx = 0
 for(m in M1:M){
+  idx = idx + 1
   for(b in 1:B){
-    mki[,b,m] = mki_all[m, (b-1)*K+(1:K)]
+    mki[,b,idx] = mki_all[m, (b-1)*K+(1:K)]
   }
 }
 
-if(F){
-  PSM1 = psm(mki[1,,])
-  PSM2 = psm(mki[2,,])
-  PSM3 = psm(mki[3,,])
-}
+PSM1 = psm(t(mki[1,,]))
+PSM2 = psm(t(mki[2,,]))
+PSM3 = psm(t(mki[3,,]))
 
-# Reorder rows and columns (observations) of a dissimilarity matrix intra groups 
-# and possibly reorder also the groups (batch of observations)
-reorder_dismat <-  function(dismat, groups, order.groups=NULL){
-  # Use correlation between variables as distance
-  order.dis   = integer(0)
-  J           = length(unique(groups))
-  if(is.null(order.groups)){
-    order.j   = 1:J
-  } else {
-    order.j   = order.groups
-  }
-  for (j in order.j){
-    groups.j  = which(groups==j)
-    dd        = as.dist((1-dismat[groups.j, groups.j])/2)
-    hc        = hclust(dd)
-    order.dis = c(order.dis, hc$order+length(order.dis))
-  }
-  dismat      = dismat[order.dis, order.dis]
-  dismat      = dismat[nrow(dismat):1,]
-}
-
-## Function to plot the heatmap of the posterior probabilities of co-clustering
-## of obs assigned to vertices
 Plot_heat <- function(dissimlar_stable = dissimlar_stable,
-                             I          = B){
-  dismat      = round(dissimlar_stable,2)
+                      I          = B){
+  dismat      = round(dissimlar_stable, 2)
   dismat      = reorder_dismat(dismat,groups=rep(1,I))
   plot_dismat = reshape2::melt(dismat)
-  ggplot(data=plot_dismat, aes(x=factor(Var1), y=factor(Var2), fill=value))+ 
-    geom_tile()+ theme_bw()+ 
-    scale_y_discrete(breaks = floor(seq(1,I,length.out = 9)), 
-                     labels = floor(seq(1,I,length.out = 9))) +
-    scale_x_discrete(breaks = floor(seq(1,I,length.out = 9)), 
-                     labels = floor(seq(1,I,length.out = 9))) +
-    xlab("OTU")+ylab("OTU")+
+  ggplot(data=plot_dismat, aes(x=factor(Var1), y=factor(Var2), fill=value)) + 
+    geom_tile() + theme_bw()+ 
+    scale_y_discrete(limits=floor(seq(I, 1)),
+                     breaks = floor(seq(1, I, length.out = 9)), 
+                     labels = floor(seq(1, I, length.out = 9))) +
+    scale_x_discrete(breaks = floor(seq(1, I, length.out = 9)), 
+                     labels = floor(seq(1, I, length.out = 9))) +
+    xlab("OTU") + ylab("OTU") +
     scale_fill_gradientn(colours = c("white", "yellow", "red"), 
-                         values = rescale(c(0,0.5,1)), space = "Lab", name="")+
+                         values = rescale(c(0, 0.5, 1)), 
+                         space = "Lab", name="") +
     theme(legend.position = "right", text = element_text(size=20))
 }
 
@@ -331,94 +303,39 @@ P1 = Plot_heat(PSM1, B) + xlab("") + theme(legend.position="none")
 P2 = Plot_heat(PSM2, B) + ylab("") + theme(legend.position="none")
 P3 = Plot_heat(PSM3, B) + xlab("") + ylab("")
 
-library(ggpubr)
+
 
 PHeat <- ggarrange(P1, P2, P3, labels = c("1", "2", "3"), nrow=1,
-                   widths = c(1, 1, 1.3))
+                   widths = c(1, 1, 1.2))
 
 ggsave(plot=PHeat, file="Image/mik_coclusterprob_sorted2.pdf", 
        width=15, height=4.5)
 
-ggsave(file="Image/prova3.pdf", 
-       width=5, height=4.5)
-
-Point_Mki1 = salso::salso(mki[1,,-(1:90)], nRuns = 100, 
+Point_Mki1 = salso::salso(t(mki[1,,]), nRuns = 100, 
                           maxZealousAttempts = 100, loss=VI())
-Point_Mki2 = salso::salso(mki[2,,-(1:90)], nRuns = 100, 
+Point_Mki2 = salso::salso(t(mki[1,,]), nRuns = 100, 
                           maxZealousAttempts = 100, loss=VI())
-Point_Mki3 = salso::salso(mki[3,,-(1:90)], nRuns = 100, 
+Point_Mki3 = salso::salso(t(mki[1,,]), nRuns = 100, 
                           maxZealousAttempts = 100, loss=VI())
-
-fig5(list(1,2,3), 
-     niter  = 1e4, #iteration MCMC
-     niter0 = 1e3, # estimating Sj after niter0 iterations and stop updating Sj
-     niter1 = 2e3 # just for plot 
-)
-
-fig4(
-     niter  = 1e4, #iteration MCMC
-     niter0 = 1e3, # estimating Sj after niter0 iterations and stop updating Sj
-     niter1 = 2e3 # just for plot 
-)
-
-y[order(Point_Mki1), point_SJ==1]
-y[order(Point_Mki2), point_SJ==2]
-y[order(Point_Mki3), point_SJ==3]
-
-od1=unlist(sapply(1:8,function (i) which(Point_Mki1==i)))
-od2=unlist(sapply(1:8,function (i) which(Point_Mki2==i)))
-od3=unlist(sapply(1:8,function (i) which(Point_Mki3==i)))
-
-pdf("heatmap.pdf",width=8,height=3)
-par(mfrow=c(1,3))
-heatmap(y[order(Point_Mki1),point_SJ==1],Colv = NA, Rowv = NA)
-heatmap(y[order(Point_Mki2),point_SJ==2],Colv = NA, Rowv = NA)
-heatmap(y[order(Point_Mki3),point_SJ==3],Colv = NA, Rowv = NA)
-dev.off()
-
-pdf("heatmap1.pdf",width=4,height=3)
-heatmap(y[od1,s_star==1],Colv = NA, Rowv = NA)
-dev.off()
-
-pdf("heatmap2.pdf",width=4,height=3)
-heatmap(y[od2,s_star==2],Colv = NA, Rowv = NA)
-dev.off()
-
-pdf("heatmap3.pdf",width=4,height=3)
-heatmap(y[od3,s_star==3],Colv = NA, Rowv = NA)
-dev.off()
-
-
-heatmap(y[,s_star==1],Colv = NA, Rowv = NA)
-heatmap(y[,s_star==2],Colv = NA, Rowv = NA)
-heatmap(y[,s_star==3],Colv = NA, Rowv = NA)
-
-
-charOTU <- function(s1,s2){
-  idx=sort(abs(rowMeans(y[,s_star==s1])-rowMeans(y[,s_star==s2])),decreasing=TRUE,index.return=T)$ix
-  names=c(rownames(y)[idx==1],rownames(y)[idx==2],rownames(y)[idx==3])
-  return(names)
-}
-charOTU(1,2)
-charOTU(1,3)
-charOTU(2,3)
-
-Z=y[order(rowSums(y),decreasing = T),]
 
 Zmelts <- rbind(
-  reshape2::melt(Z[,point_SJ==1]) %>%
-    mutate(point_SJ = "1"),
-  reshape2::melt(Z[,point_SJ==2]) %>%
-    mutate(point_SJ = "2") #,
-  # reshape2::melt(Z[,point_SJ==3]) %>%
-  #   mutate(point_SJ = "3")
+  reshape2::melt(y[order(Point_Mki1),point_SJ==1]) %>%
+    mutate(point_SJ = "C-1"),
+  reshape2::melt(y[order(Point_Mki2),point_SJ==2]) %>%
+    mutate(point_SJ = "C-2") #,
+  # cbind(Var1=1:length(Point_Mki3), Var2 = rep(1, length(Point_Mki3)), 
+  #       reshape2::melt(Z[order(Point_Mki3),point_SJ==3])) %>%
+  #   mutate(point_SJ = "C-3")
 )
 Zmelts$Var1 = as.factor(as.integer(Zmelts$Var1))
 
 P = ggplot(Zmelts,aes(Var2,Var1,fill=value)) +
-  geom_raster() +
-  facet_wrap(~point_SJ)+
-  scale_fill_viridis_c()
+  geom_raster() + theme_bw()+ 
+  facet_wrap(.~point_SJ, scales = "free")+
+  scale_fill_viridis_c()+
+  theme(axis.text.x = element_blank(),
+    axis.text.y = element_blank())+
+  labs(y= "OTU", x = "Subject") 
 
-ggsave(plot=P, file="Image/mb-heatmap-y2.pdf", height = 5, width = 15)    
+ggsave(plot=P, file="Image/mb-heatmap-y2.pdf", height = 5, width = 6)    
 
