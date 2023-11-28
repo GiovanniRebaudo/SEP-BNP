@@ -113,7 +113,7 @@ ggplot() +
 library("ape")
 # Default plot
 plot(as.phylo(hc2), cex = 0.6, label.offset = 0.5)
-legend("topright", c(1,2), legend("AF","AA"))
+legend("topright",c(1,2),legend("R-AF","Af-AM"))
 
 library(ggdendro)
 ggdendrogram(hc2,cex=0.5)

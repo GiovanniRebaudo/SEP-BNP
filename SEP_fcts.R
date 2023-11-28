@@ -402,17 +402,17 @@ lmy.Mki  <- function(ybk,sig2l)
 writeMCMC <- function(iter,pi,Sj,w,mki,mu,sig2,ll,pmki=rep(0,L),app=T)
 { # open files to save MCMC sims
   ## pmki = # accepted moves for each of the L OTU clusters
-  write(pi, "pi.txt", K, append=app)
-  write(Sj, "Sj.txt", n, append=app)
-  write(c(w), "w.txt", L , append=app)
-  write(c(mki), "mki.txt", K*B, append=app)
-  write(mu, "mu.txt", L, append=app)
-  write(sig2, "sig.txt", L, append=app)
+  write(pi, "Data-and-Results/pi.txt", K, append=app)
+  write(Sj, "Data-and-Results/Sj.txt", n, append=app)
+  write(c(w), "Data-and-Results/w.txt", L , append=app)
+  write(c(mki), "Data-and-Results/mki.txt", K*B, append=app)
+  write(mu, "Data-and-Results/mu.txt", L, append=app)
+  write(sig2, "Data-and-Results/sig.txt", L, append=app)
   nk=sapply(1:K,function(k) sum(Sj==k))
-  write(nk, "nk.txt", K, append=app)
+  write(nk, "Data-and-Results/nk.txt", K, append=app)
   nl=sapply(1:L,function(l) sum(c(mki)==l))
-  write(nl, "nl.txt", L, append=app)
-  write(ll, "logl.txt", 1, append=app)
+  write(nl, "Data-and-Results/nl.txt", L, append=app)
+  write(ll, "Data-and-Results/logl.txt", 1, append=app)
   
   ## write summary of the iteration to "iter.txt"
   nk=sapply(1:K,function(k) sum(Sj==k))
@@ -420,7 +420,7 @@ writeMCMC <- function(iter,pi,Sj,w,mki,mu,sig2,ll,pmki=rep(0,L),app=T)
   nkp=sum(nk>0)
   nlp=sum(nl>0)
   summ = c(iter, nkp, nlp, nk, nl, ll, pmki)
-  write(summ, "iter.txt", length(summ), append=app)
+  write(summ, "Data-and-Results/iter.txt", length(summ), append=app)
 }
 
 niter=500; iter=0

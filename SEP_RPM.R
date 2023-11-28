@@ -201,21 +201,21 @@ if(Run_MCMC){
 }
 
 # Load output
-pi    <- read.myfile("pi.txt")
-Sj    <- read.myfile("Sj.txt")
-w     <- read.myfile("w.txt", K, L) # w[k, iter, l]
-mki   <- read.myfile("mki.txt", K)
-mu    <- read.myfile("mu.txt")
-sig2  <- read.myfile("sig.txt")
+pi    <- read.myfile("Data-and-Results/pi.txt")
+Sj    <- read.myfile("Data-and-Results/Sj.txt")
+w     <- read.myfile("Data-and-Results/w.txt", K, L) # w[k, iter, l]
+mki   <- read.myfile("Data-and-Results/mki.txt", K)
+mu    <- read.myfile("Data-and-Results/mu.txt")
+sig2  <- read.myfile("Data-and-Results/sig.txt")
 # nk=sapply(1:K,function(k) sum(Sj==k))
-nk    <- read.myfile("nk.txt")
+nk    <- read.myfile("Data-and-Results/nk.txt")
 # nl=sapply(1:L,function(l) sum(c(mki)==l))
-nl    <- read.myfile("nl.txt")
-ll    <- read.myfile("logl.txt")
+nl    <- read.myfile("Data-and-Results/nl.txt")
+ll    <- read.myfile("Data-and-Results/logl.txt")
 nkp   <- sum(nk>0)
 nlp   <- sum(nl>0)
 # summ  <- c(iter, nkp, nlp, nk, nl, ll, pmki)
-summ  <- read.myfile("iter.txt")
+summ  <- read.myfile("Data-and-Results/iter.txt")
 
 niter <- dim(w)[2]
 point_SJ = salso::salso(Sj, nRuns = 100, maxZealousAttempts = 100, loss=VI())
@@ -259,8 +259,8 @@ if(length(unique(point_SJ))!=3){
 niter  = 1e4 #iteration MCMC
 niter0 = 1e3 # estimating Sj after niter0 iterations and stop updating Sj
 niter1 = 2e3 # just for plot 
-mki_all <- read.myfile("mki.txt",K)
-summ = read.myfile("iter.txt")
+mki_all <- read.myfile("Data-and-Results/mki.txt",K)
+summ = read.myfile("Data-and-Results/iter.txt")
 it = summ[,1]
 col = brewer.pal(9, name="YlOrRd")
 ## col = viridis(10)
