@@ -25,6 +25,9 @@
 ## initializing pars for MC
 ## 
 
+# Assign K = 10 as default if not assigned
+if(!exists("K")){K<-10}
+
 init.pi <- function()
 {## pi[k], cluster probs for S[j]; generate from the prior
   vk=c(rbeta(K-1,1,alpha),1) # fractions of stick-breaking
@@ -181,9 +184,6 @@ check.ll <- function(txt,lastll,mu,sig2,Sj,mki,w=NULL, pi=NULL, post=F)
   return(ll)
 }
 
-
-
-
 #######################################################
 ## MCMC transition prob's 
 
@@ -201,7 +201,6 @@ Update_mu <- function(yl,nl,sig2_l){
   return(mu)
 }
 
-
 Update_sig2 <- function(yl,nl,mu_l){
   ## =4. in the notes
   if (nl==0) # empty OTU cluster - generate from prior
@@ -210,7 +209,6 @@ Update_sig2 <- function(yl,nl,mu_l){
     sig2=rinvgamma(1,a0+nl/2,b0+sum((yl-mu_l)^2)/2)
   return(sig2)
 }
-
 
 update.pi <- function(Sj)
 {  # update vk and pi where pi[k] = v[k]*prod{h<k} (1-v[h])
@@ -236,7 +234,6 @@ update.w <- function(mki)
   }
   return(w)
 }
-
 
 update.SjMarg <- function(mu,sig2,Sj,pi,w)
 { #update Sj using MH trans prob
@@ -292,7 +289,6 @@ update.SjMarg <- function(mu,sig2,Sj,pi,w)
 }
 
 ## ********************************* aux functions for update.Sj
-
 dGk <- function(y,mu,sig2,wk)
 {# evaluates *log* G_k(y), marginalizing mki, conditioning on mu,sig,w
   ## careful! THis is the marginal for p(y[j] | Sj=k,mu,sig2,pi)
@@ -327,9 +323,6 @@ dGkmv <- function(k,mu,sig2,Sj,w)
 }
 
 ## *******************************************************
-
-
-
 update.Mki <- function(mu,sig2,Sj,w,mki)
 {  #update M_nik
   ## = item 2. in notes
@@ -397,8 +390,7 @@ lmy.Mki  <- function(ybk,sig2l)
 
 
 #######################################################
-## mcmc
-
+## MCMC
 writeMCMC <- function(iter,pi,Sj,w,mki,mu,sig2,ll,pmki=rep(0,L),app=T)
 { # open files to save MCMC sims
   ## pmki = # accepted moves for each of the L OTU clusters
@@ -639,8 +631,6 @@ read.myfile  <- function(fn, p=NULL, q=NULL)
   return(X)
 }
 
-
-
 plt.Gk  <- function(w,mu,sig2,add=F,Sj,M=100)
 { ## plots current Gk
   nk=sapply(1:K,function(k) sum(Sj==k))
@@ -659,7 +649,6 @@ plt.Gk  <- function(w,mu,sig2,add=F,Sj,M=100)
     matlines(xx, t(yy),type="l", lwd=lwd,col=1)
   }
 }
-
 
 plt.Gkbar  <- function()
 {
@@ -716,4 +705,49 @@ Plot_heat <- function(dissimlar_stable = dissimlar_stable,
                          values = rescale(c(0, 0.5, 1)), 
                          space = "Lab", name="") +
     theme(legend.position = "right", text = element_text(size=20))
+}
+
+#### Functions for protein regression
+readDta_reg = function(file="data_protein.RData"){
+  ## cleaning data and construct design matrix
+  ## rownames(dta)=c()
+  load(file)
+  dta=cbind(c(rep(0,21),rep(1,21)),PL)
+  colnames(dta)[1]="z"
+  
+  dta2=as.data.frame(dta) %>%
+    group_by(z,age) %>%
+    summarise(across(everything(), mean, na.rm = TRUE)) %>%
+    as.matrix()
+  ages <- matrix(dta2[,2],ncol=2)
+  ## remove proteins with < 10 not NA's
+  nna  <- apply(dta2,2,function(x){sum(is.na(x))})
+  R = nrow(dta2)
+  jdx  <- which (30-nna<10)
+  dta2=dta2[,-jdx]
+  nna  <- apply(dta2,1,function(x){sum(is.na(x))})
+  ## could drop obs with too many NA's -- but don't do it now..
+  
+  age=dta2[,2]
+  age_std=(dta2[,2]-mean(dta2[,2]))/sd(dta2[,2])
+  x=cbind(dta2[,1],age_std,dta2[,1]*age_std)
+  ## don't think we ever use the last item, the interaction
+  y= dta2[,3:dim(dta2)[2]]
+  ## remove some more proteins with too many NA's;
+  ## will use hclust(.) to initialize clustering; therefore remove few more proteins that
+  ## give NA's in evaluating dist(.) (needed for hclust):
+  idx  = unique(which(is.na(as.matrix(dist(t(y)))),arr.ind=T)[,1]) #2nd col is the same..
+  y = y[ ,-idx]
+  ## tried the same for patients --
+  ##        but turns out hclust is ok with all patients as is
+  
+  ## total number of proteins
+  C=dim(y)[2]
+  
+  ## construct splines using bs package
+  bsx2=bs(x[,2],degree = 3,
+          knots = quantile(x[,2],c(0.33,0.67)),intercept = T)
+  X=cbind(bsx2,x[,1]*bsx2)
+  
+  return(list(X=X,y=y,C=C,R=nrow(X),p=ncol(X), ages=ages))
 }
