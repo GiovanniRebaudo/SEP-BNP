@@ -155,8 +155,20 @@ prior = list(
 
 # Run MCMC
 if (FALSE){
-  main_reg(1000)
+  main_reg(2000)
 }
 
+# Plots in the paper
 
+pltInit_reg()
+
+of=maxDiff_reg()
+
+plt_reg(T,T,F,201,case=T,ctr=T)
+plt_reg(T,T,F,1201,case=T,ctr=T)
+plt_reg(T,T,F,2201,case=T,ctr=T)
+plt_reg(T,T,F,15,case=T,ctr=T)
+plt_reg(T,T,F,115,case=T,ctr=T)
+plt_reg(F,F,T,of[1:200],case=T,ctr=T,pltm=F)
+plt_reg(F,T,F,of[1:20],case=T,ctr=T,dtatype="l")
 

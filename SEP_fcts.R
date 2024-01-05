@@ -181,8 +181,8 @@ check.ll <- function(txt,lastll,mu,sig2,Sj,mki,w=NULL, pi=NULL, post=F)
   if (ll < lastll-500) {## bug!
     cat("after ",
         txt,"\t ll=", format(ll), "\t last-ll=",format(lastll),"\n")
-    print(lpo)
-    browser()
+    # print(lpo)
+    # browser()
   }
   return(ll)
 }
@@ -559,8 +559,8 @@ niter = 1000; niter0 = 250; niter1 = 750
 fig4  <- function(niter=NULL, niter0=NULL, niter1=NULL)
 {# create plots 4,5 & 6
   ## Fig 4 ###############
-  SjMC  <- read.myfile("Sj.txt",n)
-  mu = read.myfile("mu.txt", L)
+  SjMC  <- read.myfile("Data-and-Results/Sj.txt",n)
+  mu = read.myfile("Data-and-Results/mu.txt", L)
   Sj  <- SjMC[nrow(SjMC),]
   nk=sapply(1:K,function(k) sum(Sj==k))
   K1 = sum(nk>1)
@@ -587,8 +587,8 @@ fig5 <- function(klist, niter=NULL, niter0=NULL, niter1=NULL)
 {## klist = list of subject clusters for which to plot nested clusters
   ## get klist as return value from fig4()
   ## prepares Fig 5 ##
-  mki2 <- read.myfile("mki.txt",K)
-  summ = read.myfile("iter.txt")
+  mki2 <- read.myfile("Data-and-Results/mki.txt",K)
+  summ = read.myfile("Data-and-Results/iter.txt")
   it = summ[,1]
   col = brewer.pal(9, name="YlOrRd")
   ## col = viridis(10)
@@ -622,7 +622,7 @@ fmap = function(x)
 {
   1/(1+exp(-20*(x-0.25)))
 }
-fn <- "w.txt"; p <- K; q  <-  L
+fn <- "Data-and-Results/w.txt"; p <- K; q  <-  L
 read.myfile  <- function(fn, p=NULL, q=NULL)
 { # read matrix (q=NULL) or array (q>0)
   X  <- as.matrix(read.table(fn))
@@ -655,12 +655,12 @@ plt.Gk  <- function(w,mu,sig2,add=F,Sj,M=100)
 
 plt.Gkbar  <- function()
 {
-  w  <- read.myfile("w.txt",K,L) # w[k, iter, l]
+  w  <- read.myfile("Data-and-Results/w.txt",K,L) # w[k, iter, l]
   niter  <- dim(w)[2]
-  pi <- read.myfile("pi.txt",K)
-  mu  <- read.myfile("mu.txt",L)
-  sig2  <- read.myfile("sig.txt",L)
-  Sj  <-  read.myfile("Sj.txt",K)
+  pi <- read.myfile("Data-and-Results/pi.txt",K)
+  mu  <- read.myfile("Data-and-Results/mu.txt",L)
+  sig2  <- read.myfile("Data-and-Results/sig.txt",L)
+  Sj  <-  read.myfile("Data-and-Results/Sj.txt",K)
   
   ## clustering of patients
   pij  <- matrix(0,n,n)
@@ -802,12 +802,14 @@ mcmcUpd_reg = function(mdpEta, mdpXi,it){
   ## updates global summaries and writes to file (if desired..)
   ## prints out summary at iteration
   
+  if(F){
   ## print summaries
   cat(it, "\t K-Prot=",mdpEta$K," (",table(mdpEta$s),"), \n avg(betas)=",
       format(apply(mdpEta$betas,1,mean),digits=2),"\n")
   cat("\t K-Pat= ",mdpXi$K," (",table(mdpXi$s),") avg(betas)=",
       format(mean(mdpXi$betas),digits=2),"\t")
   cat("sig=", format(sqrt(mdpXi$sigs)),"   SSM=", format(SSM), "\n")
+  }
   
   ## summaries
   nkProt = sort( table(mdpEta$s), dec=T)[1:5]
@@ -828,19 +830,27 @@ mcmcUpd_reg = function(mdpEta, mdpXi,it){
   Eyp <<- Eyp+yphat
   Eyp2 <<- Eyp2+yphat*yphat
   nEy <<- nEy+1
-  browser()
+  # browser()
   if (it %% 50 == 0){
     options(digits=2)
-    write.table(chain,"chain.txt",sep=",",append=filesAppend)
-    write.table(mdpXi$s,"sPat.txt",sep=",",append=filesAppend)
-    write.table(mdpEta$s[1:250],"sProt.txt",sep=",",append=filesAppend)
-    ## save only the first 250 proteins -- seems enough :-)
+    write.table(chain,"Data-and-Results/chain.txt",sep=",",append=filesAppend, 
+                col.names=!file.exists("Data-and-Results/chain.txt"))
+    write.table(mdpXi$s,"Data-and-Results/sPat.txt",sep=",",append=filesAppend, 
+                col.names=!file.exists("Data-and-Results/sPat.txt"))
+    write.table(mdpEta$s, #[1:250],
+                "Data-and-Results/sProt.txt",sep=",",append=filesAppend,
+                col.names=!file.exists("Data-and-Results/sProt.txt"))
+    ## Save all, otherwise save only the first 250 proteins if it is enough
     filesAppend <<- TRUE # from now on append those three files..
     ## the files below are always overwritten
-    write.table(format(Ey/nEy),"Ey.txt",quote=F,col.names=F,row.names=F,sep=",")
-    write.table(format(Ey2/nEy),"Ey2.txt",quote=F,col.names=F,row.names=F,sep=",")
-    write.table(format(Eyp/nEy),"Eyp.txt",quote=F,col.names=F,row.names=F,sep=",")
-    write.table(format(Eyp2/nEy),"Eyp2.txt",quote=F,col.names=F,row.names=F,sep=",")
+    write.table(format(Ey/nEy), "Data-and-Results/Ey.txt", quote=F,
+                col.names=F, row.names=F, sep=",")
+    write.table(format(Ey2/nEy), "Data-and-Results/Ey2.txt",
+                quote=F, col.names=F, row.names=F,sep=",")
+    write.table(format(Eyp/nEy), "Data-and-Results/Eyp.txt",
+                quote=F, col.names=F, row.names=F, sep=",")
+    write.table(format(Eyp2/nEy), "Data-and-Results/Eyp2.txt", 
+                quote=F, col.names=F, row.names=F, sep=",")
   }
   return(0)
 }
@@ -857,8 +867,6 @@ mdpFitted_reg = function(mdpEta, mdpXi=NULL, fitProt=F){
   }
   return(f)
 }
-
-
 
 mdpOffset_reg = function(mdp,incr=F){
   ## creates global variable
@@ -881,7 +889,6 @@ mdpOffset_reg = function(mdp,incr=F){
     yt <<- y-offset  ## under d=1: repeating offset for each column (=prot)
   return(0)
 }
-
 
 mdpSwap_reg = function(mdp,k1,k2){
   ## swaps clusters k1 vs k2
@@ -1110,7 +1117,6 @@ mdpBetaHat_reg = function(Ck,Vi=NULL, Vim=NULL)
   ## returning Vi and Vim allows easy updating by adding/substracting proteins
 }
 
-
 mdpMarg_reg = function(k,mdp)
 {
   ## marginal likelih for y*[k]=y[s==k]
@@ -1184,31 +1190,30 @@ updateSigs_reg = function(mdp){
   return(sigs)
 }
 
-
 #######################################################
 ## plots and debugging
 
 pltInit_reg = function()
 { ## in preparation for plt_reg(), read in all simulation summaries
-  mcmc <<-  read.csv("chain.txt",header=T)
-  Ey <<-  as.matrix( read.csv("Ey.txt", header=F) )
+  mcmc <<-  read.csv("Data-and-Results/chain.txt",header=T)
+  Ey <<-  as.matrix( read.csv("Data-and-Results/Ey.txt", header=F) )
   np=ncol(Ey)
   my <<-  matrix(apply(Ey,1,mean),ncol=2) ## avg expression by condition (not used..)
   My = apply(my,1,mean)                   ## overall avg profile (never used..)
   Ey <<-  array(Ey,dim=c(16,2,np))    ## for easier access below
   ## dimensions are: age, case, protein
   
-  Ey2 <<-  as.matrix( read.csv("Ey2.txt", header=F) ) 
+  Ey2 <<-  as.matrix( read.csv("Data-and-Results/Ey2.txt", header=F) ) 
   my2 <<-  matrix(apply(Ey2,1,mean),ncol=2)
   Ey2 <<-  array(Ey2,dim=c(16,2,np))
   
-  Eyp <<-  as.matrix(read.csv("Eyp.txt", header=F) ) 
+  Eyp <<-  as.matrix(read.csv("Data-and-Results/Eyp.txt", header=F) ) 
   mp <<-  matrix(apply(Eyp,1,mean),ncol=2) ## avg by condition
   Eyp <<-  array(Eyp,dim=c(16,2,np))       # Eyp as 3-d array
   mp3  <- array(mp,dim=c(16,2,np))         ## avg by condition repeated as needed..
   Eyp0 <<- Eyp-mp3        ## Eyp corrected by avg per patient (non likelihood identifiable..)
   
-  Eyp2 <<- as.matrix(read.csv("Eyp2.txt", header=F) ) 
+  Eyp2 <<- as.matrix(read.csv("Data-and-Results/Eyp2.txt", header=F) ) 
   mp2 <<-  matrix(apply(Eyp2,1,mean),ncol=2)
   Eyp2 <<-  array(Eyp2,dim=c(16,2,np))
   
@@ -1267,9 +1272,12 @@ maxDiff_reg = function()
   ## same with raw dta
   dfy = abs( (yy[Tm,1,]-yy[1,1,])-(yy[Tm,2,]-yy[1,2,]))
   oy=order(-dfy)
+  # 
+  np = ncol(Ey)
+  #
   ## with protein-specific regression
   sigs = mean(mcmc[,3])  # posterior mean for sig2
-  yhat = matrix(0,nrow=32,ncol=np) # initilaize
+  yhat = matrix(0,nrow=32, ncol=np) # initilaize
   Vi = t(X)%*% X         # same for all proteins
   V = solve(Vi)
   beta = rep(0,p)
@@ -1290,34 +1298,51 @@ maxDiff_reg = function()
   return(of)
 }
 
-paper_reg = function()
-{ # calls all the plots for the paper
-  pltInit_reg()
+### plot ggplot reg
+plt_reg_ggplot <- function(Ey, yy, mp, ages, fit = TRUE, dta = FALSE, prot = FALSE, idx = NULL, lw = 0.5, pltm = FALSE, case = FALSE, ctr = TRUE, dtatype = "p") {
   
-  of=maxDiff_reg()
+  # Fitted lines
+  pltmch <- ifelse(pltm, "l", "n")
+  I <- length(idx)
   
-  ps("201") # for some randomly selected patients
-  plt_reg(T,T,F,201,case=T,ctr=T)
-  devoff()
-  ps("1201")
-  plt_reg(T,T,F,1201,case=T,ctr=T)
-  devoff()
-  ps("2201")
-  plt_reg(T,T,F,2201,case=T,ctr=T)
-  devoff()
-  ps("15")
-  plt_reg(T,T,F,15,case=T,ctr=T)
-  devoff()
-  ps("115")
-  plt_reg(T,T,F,115,case=T,ctr=T)
-  devoff()
-  ps("protP") # plot some proteins, w/o patient effects
-  plt_reg(F,F,T,of[1:200],case=T,ctr=T,pltm=F)
-  devoff()
+  p <- ggplot() +
+    geom_line(data = data.frame(ages = rep(ages, each = ncol(Ey)), my = c(t(Ey)), group = rep(1:ncol(Ey), each = nrow(Ey))),
+              aes(x = ages, y = my, group = group, color = as.factor(group)), size = 3, linetype = pltmch) +
+    ylim(range(Ey, na.rm = TRUE)) +
+    ylab("Y") +
+    theme_minimal()
   
-  ps("dta")
-  plt_reg(F,T,F,of[1:20],case=T,ctr=T,dtatype="l")
-  devoff()
+  if (fit) {
+    if (ctr) p <- p + geom_line(data = data.frame(ages = rep(ages[, 1], each = ncol(Ey)), Ey = c(t(Ey[, 1, idx])), group = 1:I),
+                                aes(x = ages[, 1], y = Ey, group = group), color = 1:I, size = lw, linetype = "solid") +
+        scale_color_manual(values = 1:I)
+    if (case) p <- p + geom_line(data = data.frame(ages = rep(ages[, 2], each = ncol(Ey)), Ey = c(t(Ey[, 2, idx])), group = 1:I),
+                                 aes(x = ages[, 2], y = Ey, group = group), color = 1:I, size = lw, linetype = "dashed") +
+        scale_color_manual(values = 1:I)
+  }
+  
+  if (dta) {
+    dtatype_pch <- ifelse(dtatype == "p", 20, 1)
+    if (ctr) p <- p + geom_point(data = data.frame(ages = rep(ages[, 1], each = ncol(yy)), yy = c(t(yy[, 1, idx])), group = 1:I),
+                                 aes(x = ages[, 1], y = yy, group = group, shape = "Control"), size = 0.53, pch = dtatype_pch) +
+        scale_shape_manual(values = 20)
+    if (case) p <- p + geom_point(data = data.frame(ages = rep(ages[, 2], each = ncol(yy)), yy = c(t(yy[, 2, idx])), group = 1:I),
+                                  aes(x = ages[, 2], y = yy, group = group, shape = "Case"), size = 0.53, pch = dtatype_pch) +
+        scale_shape_manual(values = 1)
+  }
+  
+  if (prot) {
+    p <- p + geom_line(data = data.frame(ages = rep(ages, each = ncol(mp)), mp = c(t(mp)), group = rep(1:ncol(mp), each = nrow(mp))),
+                       aes(x = ages, y = mp, group = group), size = 3, linetype = pltmch, color = "black") +
+      ylim(range(c(mp, yy), na.rm = TRUE))
+    
+    if (ctr) p <- p + geom_line(data = data.frame(ages = rep(ages[, 1], each = ncol(mp)), Eyp0 = c(t(Eyp0[, 1, idx])), group = 1:I),
+                                aes(x = ages[, 1], y = Eyp0, group = group), color = "grey", size = 1, linetype = "solid") +
+        scale_color_manual(values = "grey")
+    if (case) p <- p + geom_line(data = data.frame(ages = rep(ages[, 2], each = ncol(mp)), Eyp0 = c(t(Eyp0[, 2, idx])), group = 1:I),
+                                 aes(x = ages[, 2], y = Eyp0, group = group), color = "pink", size = 1, linetype = "dashed") +
+        scale_color_manual(values = "pink")
+  }
+  
+  print(p)
 }
-
-
