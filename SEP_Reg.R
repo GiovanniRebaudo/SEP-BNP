@@ -161,14 +161,29 @@ if (FALSE){
 # Plots in the paper
 
 pltInit_reg()
-
 of=maxDiff_reg()
 
+library(ggplot2)
+library(reshape2)
+
 plt_reg(T,T,F,201,case=T,ctr=T)
+plt_reg_ggplot(T,T,F,201,case=T,ctr=T)
+
 plt_reg(T,T,F,1201,case=T,ctr=T)
+plt_reg_ggplot(T,T,F,1201,case=T,ctr=T)
+
 plt_reg(T,T,F,2201,case=T,ctr=T)
+plt_reg_ggplot(T,T,F,2201,case=T,ctr=T)
+
 plt_reg(T,T,F,15,case=T,ctr=T)
+plt_reg_ggplot(T,T,F,15,case=T,ctr=T)
+
 plt_reg(T,T,F,115,case=T,ctr=T)
+plt_reg_ggplot(T,T,F,115,case=T,ctr=T)
+
 plt_reg(F,F,T,of[1:200],case=T,ctr=T,pltm=F)
+plt_reg_ggplot(F,F,T,of[1:200],case=T,ctr=T,pltm=F)
+
 plt_reg(F,T,F,of[1:20],case=T,ctr=T,dtatype="l")
+plt_reg_ggplot(F,T,F,of[1:20],case=T,ctr=T,dtatype="l")
 

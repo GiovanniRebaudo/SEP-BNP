@@ -1299,50 +1299,92 @@ maxDiff_reg = function()
 }
 
 ### plot ggplot reg
-plt_reg_ggplot <- function(Ey, yy, mp, ages, fit = TRUE, dta = FALSE, prot = FALSE, idx = NULL, lw = 0.5, pltm = FALSE, case = FALSE, ctr = TRUE, dtatype = "p") {
+plt_reg_ggplot = function(fit=T, dta=F, prot=F, idx=NULL, 
+                          lw=0.5, pltm=F, case=F,ctr=T){
+  np = ncol(Ey)
+  npat = nrow(Ey)
+  pltmch = ifelse(pltm,"line","n")
   
-  # Fitted lines
-  pltmch <- ifelse(pltm, "l", "n")
-  I <- length(idx)
-  
-  p <- ggplot() +
-    geom_line(data = data.frame(ages = rep(ages, each = ncol(Ey)), my = c(t(Ey)), group = rep(1:ncol(Ey), each = nrow(Ey))),
-              aes(x = ages, y = my, group = group, color = as.factor(group)), size = 3, linetype = pltmch) +
-    ylim(range(Ey, na.rm = TRUE)) +
-    ylab("Y") +
-    theme_minimal()
-  
-  if (fit) {
-    if (ctr) p <- p + geom_line(data = data.frame(ages = rep(ages[, 1], each = ncol(Ey)), Ey = c(t(Ey[, 1, idx])), group = 1:I),
-                                aes(x = ages[, 1], y = Ey, group = group), color = 1:I, size = lw, linetype = "solid") +
-        scale_color_manual(values = 1:I)
-    if (case) p <- p + geom_line(data = data.frame(ages = rep(ages[, 2], each = ncol(Ey)), Ey = c(t(Ey[, 2, idx])), group = 1:I),
-                                 aes(x = ages[, 2], y = Ey, group = group), color = 1:I, size = lw, linetype = "dashed") +
-        scale_color_manual(values = 1:I)
+  if (is.null(idx)){
+    idx=sample(1:np,10,replace=F)
   }
-  
-  if (dta) {
-    dtatype_pch <- ifelse(dtatype == "p", 20, 1)
-    if (ctr) p <- p + geom_point(data = data.frame(ages = rep(ages[, 1], each = ncol(yy)), yy = c(t(yy[, 1, idx])), group = 1:I),
-                                 aes(x = ages[, 1], y = yy, group = group, shape = "Control"), size = 0.53, pch = dtatype_pch) +
-        scale_shape_manual(values = 20)
-    if (case) p <- p + geom_point(data = data.frame(ages = rep(ages[, 2], each = ncol(yy)), yy = c(t(yy[, 2, idx])), group = 1:I),
-                                  aes(x = ages[, 2], y = yy, group = group, shape = "Case"), size = 0.53, pch = dtatype_pch) +
-        scale_shape_manual(values = 1)
-  }
-  
-  if (prot) {
-    p <- p + geom_line(data = data.frame(ages = rep(ages, each = ncol(mp)), mp = c(t(mp)), group = rep(1:ncol(mp), each = nrow(mp))),
-                       aes(x = ages, y = mp, group = group), size = 3, linetype = pltmch, color = "black") +
-      ylim(range(c(mp, yy), na.rm = TRUE))
+  if (fit | dta){
+    ## fitted lines
+    I=length(idx)
+    if(pltmch=="n"){
+      df= data.frame(ages, my)
+      Plot = ggplot(data=df, aes(x=X1,y=X1.1))+
+        coord_cartesian(ylim=range(Ey,na.rm=T), xlim=range(ages,na.rm=T))+
+        ylab("Y") +xlab("ages")
+    }
+    if (fit){
+      if (ctr){
+        df = data.frame(ages = ages[,1], Ey = Ey[,1,idx])
+        df = melt(df,id="ages")
+        # Create the plot
+        Plot <-Plot + 
+          geom_line(data=df, aes(x = ages, y = value, group = variable, 
+                                 color = factor(variable)), size = lw, linetype = 1)+
+          theme(legend.position="none")
+      }
+      if (case){
+        df = data.frame(ages = ages[,2], Ey = Ey[,2,idx])
+        df = melt(df,id="ages")
+        # Create the plot
+        Plot <-Plot + 
+          geom_line(data=df, aes(x = ages, y = value, group = variable, 
+                                 color = factor(variable)), size = lw, linetype = 2)
+      }
+    } # fit
+    if (dta){
+      ## add data
+      if (ctr) {
+        df = data.frame(ages = ages[,1], Ey = yy[,1,idx])
+        df = melt(df,id="ages")
+        # Create the plot
+        Plot <-Plot + 
+          geom_point(data=df, aes(x = ages, y = value, group = variable, 
+                                  color = factor(variable)), size = 2)
+      }
+      
+      # matlines(ages[,1], yy[,1,idx], col=1:I, lwd=0.53, lty=1,
+      #                 type=dtatype,pch=20)
+      if (case) {
+        df = data.frame(ages = ages[,2], Ey = yy[,2,idx])
+        df = melt(df,id="ages")
+        # Create the plot
+        Plot <-Plot + 
+          geom_point(data=df, aes(x = ages, y = value, group = variable, 
+                                  color = factor(variable)), 
+                     size = 2, shape=1)
+      }
+      
+    } #dtad
+  } # fit | dta
+  if (prot){
+    ## proteins w/o pat effects
+    df= data.frame(ages, mp)
+    Plot = ggplot(data=df, aes(x=X1,y=X1.1))+
+      coord_cartesian(ylim=range(Eyp,na.rm=T), xlim=range(ages,na.rm=T))+
+      ylab("Y") +xlab("ages")
+    if (ctr) {
+      df = data.frame(ages = ages[,1], Ey = Eyp0[,1,idx])
+      df = melt(df,id="ages")
+      # Create the plot
+      Plot = Plot + 
+        geom_line(data=df, aes(x = ages, y = value, group = variable, 
+                               color = "grey"), size = 1)+
+        theme(legend.position="none")
+    }
     
-    if (ctr) p <- p + geom_line(data = data.frame(ages = rep(ages[, 1], each = ncol(mp)), Eyp0 = c(t(Eyp0[, 1, idx])), group = 1:I),
-                                aes(x = ages[, 1], y = Eyp0, group = group), color = "grey", size = 1, linetype = "solid") +
-        scale_color_manual(values = "grey")
-    if (case) p <- p + geom_line(data = data.frame(ages = rep(ages[, 2], each = ncol(mp)), Eyp0 = c(t(Eyp0[, 2, idx])), group = 1:I),
-                                 aes(x = ages[, 2], y = Eyp0, group = group), color = "pink", size = 1, linetype = "dashed") +
-        scale_color_manual(values = "pink")
+    if (case) {
+      df = data.frame(ages = ages[,2], Ey = Eyp0[,2,idx])
+      df = melt(df,id="ages")
+      # Create the plot
+      Plot <-Plot + 
+        geom_line(data=df, aes(x = ages, y = value, group = variable, 
+                               color = "pink"), size = 1, linetype = 2)
+    }
   }
-  
-  print(p)
+  return(Plot)
 }
