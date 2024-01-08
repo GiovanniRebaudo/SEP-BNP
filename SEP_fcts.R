@@ -851,6 +851,8 @@ mcmcUpd_reg = function(mdpEta, mdpXi,it){
                 quote=F, col.names=F, row.names=F, sep=",")
     write.table(format(Eyp2/nEy), "Data-and-Results/Eyp2.txt", 
                 quote=F, col.names=F, row.names=F, sep=",")
+    save(yt,file="Data-and-Results/yt.RData")
+    print(it)
   }
   return(0)
 }
@@ -1218,6 +1220,7 @@ pltInit_reg = function()
   Eyp2 <<-  array(Eyp2,dim=c(16,2,np))
   
   yy <<-  array(y,dim=c(16,2,np))   # in same 3-d array for easier plotting blow..
+  yt <<- load("Data-and-Results/yt.RData")
 }
 
 plt_reg = function(fit=T, dta=F, prot=F, idx=NULL, lw=0.5, pltm=F, case=F,ctr=T, dtatype="p")

@@ -176,7 +176,7 @@ mcmcUpd = function(mdpEta, mdpXi,it){
     Eyp <<- Eyp+yphat
     Eyp2 <<- Eyp2+yphat*yphat
     nEy <<- nEy+1
-    browser()
+    # browser()
     if (it %% 50 == 0){
         options(digits=2)
         write.table(chain,"chain.txt",sep=",",append=filesAppend)
@@ -701,5 +701,6 @@ paper = function()
     devoff()
 }
 
-
-main(1000)
+if(F){
+  main(100)
+}

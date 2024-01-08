@@ -155,7 +155,7 @@ prior = list(
 
 # Run MCMC
 if (FALSE){
-  main_reg(2000)
+  main_reg(100)
 }
 
 # Plots in the paper
@@ -186,4 +186,3 @@ plt_reg_ggplot(F,F,T,of[1:200],case=T,ctr=T,pltm=F)
 
 plt_reg(F,T,F,of[1:20],case=T,ctr=T,dtatype="l")
 plt_reg_ggplot(F,T,F,of[1:20],case=T,ctr=T,dtatype="l")
-
