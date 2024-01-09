@@ -1,4 +1,9 @@
+# Load relevant libraries, functions and data ----------------------------------
 rm(list=ls())
+# Set the working directory to the current folder 
+# Code to set the working directory to the current folder from RStudio
+library(rstudioapi) # version 0.15
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 set.seed(135)
 
 load("data_protein.RData")
@@ -30,7 +35,7 @@ x=cbind(bsx2,x[,1]*bsx2)
 
 
 #truncate at N=20 clusters
-tot_iter=5000
+tot_iter=100
 N=20
 #set priors
 alpha=1

@@ -851,9 +851,9 @@ mcmcUpd_reg = function(mdpEta, mdpXi,it){
                 quote=F, col.names=F, row.names=F, sep=",")
     write.table(format(Eyp2/nEy), "Data-and-Results/Eyp2.txt", 
                 quote=F, col.names=F, row.names=F, sep=",")
-    save(yt,file="Data-and-Results/yt.RData")
     print(it)
   }
+  save(yt,file="Data-and-Results/yt.RData")
   return(0)
 }
 
@@ -1219,8 +1219,7 @@ pltInit_reg = function()
   mp2 <<-  matrix(apply(Eyp2,1,mean),ncol=2)
   Eyp2 <<-  array(Eyp2,dim=c(16,2,np))
   
-  yy <<-  array(y,dim=c(16,2,np))   # in same 3-d array for easier plotting blow..
-  yt <<- load("Data-and-Results/yt.RData")
+  yy <<-  array(y,dim=c(16,2,np))   # in same 3-d array for easier plotting
 }
 
 plt_reg = function(fit=T, dta=F, prot=F, idx=NULL, lw=0.5, pltm=F, case=F,ctr=T, dtatype="p")
@@ -1280,7 +1279,7 @@ maxDiff_reg = function()
   #
   ## with protein-specific regression
   sigs = mean(mcmc[,3])  # posterior mean for sig2
-  yhat = matrix(0,nrow=32, ncol=np) # initilaize
+  yhat = matrix(0,nrow=32, ncol=np) # initialize
   Vi = t(X)%*% X         # same for all proteins
   V = solve(Vi)
   beta = rep(0,p)
@@ -1289,7 +1288,7 @@ maxDiff_reg = function()
     beta = V %*% Vim
     yhat[,j] = X %*% beta
   }
-  yyhat = array(yhat,dim=c(16,2,np))   # in same 3-d array for easier plotting blow..
+  yyhat = array(yhat,dim=c(16,2,np))   # in same 3-d array for easier plotting
   dfyhat = abs( (yyhat[Tm,1,]-yyhat[1,1,])-(yyhat[Tm,2,]-yyhat[1,2,]))
   oyhat=order(-dfyhat)
   
@@ -1303,7 +1302,7 @@ maxDiff_reg = function()
 
 ### plot ggplot reg
 plt_reg_ggplot = function(fit=T, dta=F, prot=F, idx=NULL, 
-                          lw=0.5, pltm=F, case=F,ctr=T){
+                          lw=0.5, pltm=F, case=F,ctr=T, dtatype="p"){
   np = ncol(Ey)
   npat = nrow(Ey)
   pltmch = ifelse(pltm,"line","n")
@@ -1327,7 +1326,7 @@ plt_reg_ggplot = function(fit=T, dta=F, prot=F, idx=NULL,
         # Create the plot
         Plot <-Plot + 
           geom_line(data=df, aes(x = ages, y = value, group = variable, 
-                                 color = factor(variable)), size = lw, linetype = 1)+
+                    color = factor(variable)), size = lw, linetype = 1)+
           theme(legend.position="none")
       }
       if (case){
@@ -1345,9 +1344,15 @@ plt_reg_ggplot = function(fit=T, dta=F, prot=F, idx=NULL,
         df = data.frame(ages = ages[,1], Ey = yy[,1,idx])
         df = melt(df,id="ages")
         # Create the plot
+        if (dtatype!="l"){
         Plot <-Plot + 
           geom_point(data=df, aes(x = ages, y = value, group = variable, 
-                                  color = factor(variable)), size = 2)
+                                  color = factor(variable)), size = 1)
+        } else {
+          Plot <-Plot + 
+            geom_line(data=df, aes(x = ages, y = value, group = variable, 
+                                    color = factor(variable)), size = 0.5)
+        }
       }
       
       # matlines(ages[,1], yy[,1,idx], col=1:I, lwd=0.53, lty=1,
@@ -1356,12 +1361,19 @@ plt_reg_ggplot = function(fit=T, dta=F, prot=F, idx=NULL,
         df = data.frame(ages = ages[,2], Ey = yy[,2,idx])
         df = melt(df,id="ages")
         # Create the plot
-        Plot <-Plot + 
-          geom_point(data=df, aes(x = ages, y = value, group = variable, 
-                                  color = factor(variable)), 
-                     size = 2, shape=1)
+        if (dtatype!="l"){
+          Plot <-Plot + 
+            geom_point(data=df, aes(x = ages, y = value, group = variable, 
+                                    color = factor(variable)), 
+                       size = 2, shape=1)
+        } else {
+          Plot <-Plot + 
+            geom_line(data=df, aes(x = ages, y = value, group = variable, 
+                                    color = factor(variable)), 
+                       size = 0.5, shape=1, linetype = 2) +
+            theme(legend.position="none")
+        }
       }
-      
     } #dtad
   } # fit | dta
   if (prot){
@@ -1369,15 +1381,16 @@ plt_reg_ggplot = function(fit=T, dta=F, prot=F, idx=NULL,
     df= data.frame(ages, mp)
     Plot = ggplot(data=df, aes(x=X1,y=X1.1))+
       coord_cartesian(ylim=range(Eyp,na.rm=T), xlim=range(ages,na.rm=T))+
-      ylab("Y") +xlab("ages")
+      ylab("mp") +xlab("ages")
     if (ctr) {
       df = data.frame(ages = ages[,1], Ey = Eyp0[,1,idx])
       df = melt(df,id="ages")
       # Create the plot
       Plot = Plot + 
         geom_line(data=df, aes(x = ages, y = value, group = variable, 
-                               color = "grey"), size = 1)+
-        theme(legend.position="none")
+                               color = "grey"), size = 1) +
+        theme(legend.position="none")+
+        coord_cartesian(ylim=range(df$value,na.rm=T), xlim=range(ages,na.rm=T))
     }
     
     if (case) {

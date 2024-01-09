@@ -540,7 +540,7 @@ mdpFy = function(i,k,mdp)
         mk = X %*% mdp$betas[,k]   ## mean over all patients for any protein in cluster k
         idx = !is.na(yt[,i]) # patients with data on prot i
         if (any(idx))
-            lfk =sum( dnorm(yt[idx,i], m=mk[idx], sd=sd,log=T) )
+            lfk = sum( dnorm(yt[idx,i], m=mk[idx], sd=sd,log=T) )
     }
     return(lfk)
 }

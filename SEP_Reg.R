@@ -15,6 +15,7 @@ library(invgamma)
 library(splines)
 library(ggplot2)
 theme_set(theme_bw(base_size = 14))
+library(reshape2)
 
 # Data: 
 #   is read in by readDta(), which is called right after it's defined. 
@@ -155,34 +156,48 @@ prior = list(
 
 # Run MCMC
 if (FALSE){
-  main_reg(100)
+  main_reg(6000)
 }
 
 # Plots in the paper
 
 pltInit_reg()
-of=maxDiff_reg()
+load("Data-and-Results/yt.RData")
+of = maxDiff_reg()
 
-library(ggplot2)
-library(reshape2)
 
-plt_reg(T,T,F,201,case=T,ctr=T)
-plt_reg_ggplot(T,T,F,201,case=T,ctr=T)
+P1    = plt_reg_ggplot(T,T,F,1,case=T,ctr=T)
+P201  = plt_reg_ggplot(T,T,F,201,case=T,ctr=T)
+P1201 = plt_reg_ggplot(T,T,F,1201,case=T,ctr=T)
+P2201 = plt_reg_ggplot(T,T,F,2201,case=T,ctr=T)
 
-plt_reg(T,T,F,1201,case=T,ctr=T)
-plt_reg_ggplot(T,T,F,1201,case=T,ctr=T)
+library(cowplot)
 
-plt_reg(T,T,F,2201,case=T,ctr=T)
-plt_reg_ggplot(T,T,F,2201,case=T,ctr=T)
+P1    = P1    + theme(axis.title = element_blank())
+P201  = P201  + theme(axis.title = element_blank())
+P1201 = P1201 + theme(axis.title = element_blank())
+P2201 = P2201 + theme(axis.title = element_blank())
+P  = plot_grid(P1, P201, P1201, P2201) 
 
-plt_reg(T,T,F,15,case=T,ctr=T)
-plt_reg_ggplot(T,T,F,15,case=T,ctr=T)
+# Individual plot       
+P  = P +
+  draw_label("ages", x= 0.52, y=  0, vjust=-0.5, angle= 0) +
+  draw_label("Y", x=  0, y=0.55, vjust= 1.5, angle=90)
+P
 
-plt_reg(T,T,F,115,case=T,ctr=T)
-plt_reg_ggplot(T,T,F,115,case=T,ctr=T)
+######### Normal- QQtest #####################
+chain = mcmc[,-1]
+colnames(chain) = c("it", "SSM", "sig2", "K-pat", "K-prot", paste("nk",1:5,sep=""), paste("nk",1:5,sep=""))
 
-plt_reg(F,F,T,of[1:200],case=T,ctr=T,pltm=F)
-plt_reg_ggplot(F,F,T,of[1:200],case=T,ctr=T,pltm=F)
+# I am confused
+summary(chain$`K-pat`)
+# What is ``it''?
+
+
+
+
+
 
 plt_reg(F,T,F,of[1:20],case=T,ctr=T,dtatype="l")
 plt_reg_ggplot(F,T,F,of[1:20],case=T,ctr=T,dtatype="l")
+
