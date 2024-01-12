@@ -818,7 +818,7 @@ mcmcUpd_reg = function(mdpEta, mdpXi,it){
   nkPat = ifelse(is.na(nkPat),0,nkPat)
   
   line = c(it, SSM, mdpXi$sigs, mdpEta$K, mdpXi$K, nkProt, nkPat)
-  names(line) = c("it", "SSM", "sig2", "K-pat", "K-prot", paste("nk",1:5,sep=""), paste("nk",1:5,sep=""))
+  names(line) = c("it", "SSM", "sig2", "K-prot", "K-pat", paste("nk",1:5,sep=""), paste("nk",1:5,sep=""))
   chain <<- rbind(chain,line)
   ## it, SSM, sig2, K-pat, K-prot, nk-pat*, nk-prot* (nk*: 5 largest cluster sizes, padded with 0's if needed)
   
@@ -833,7 +833,7 @@ mcmcUpd_reg = function(mdpEta, mdpXi,it){
   # browser()
   if (it %% 50 == 0){
     options(digits=2)
-    write.table(chain,"Data-and-Results/chain.txt",sep=",",append=filesAppend, 
+    write.table(chain,"Data-and-Results/chain.txt",sep=",",append=F, 
                 col.names=!file.exists("Data-and-Results/chain.txt"))
     write.table(mdpXi$s,"Data-and-Results/sPat.txt",sep=",",append=filesAppend, 
                 col.names=!file.exists("Data-and-Results/sPat.txt"))
