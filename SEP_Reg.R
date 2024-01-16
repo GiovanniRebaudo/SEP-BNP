@@ -113,12 +113,12 @@ prior = list(
     meta = rep(0,p),
     Seta = diag(p),  ## might want to reduce var of trt offsets (2nd part)
     aeta = 1,        ## eta[j] ~ G_eta; G_eta ~ PY(aeta, N(meta,Seta))
-    beta = 0.05, #0.05 # - discount parameter
+    beta = 0.05, #- discount parameter
     ## row effects (patients)
     mxi = my,       ## xi[i] ~ G_xi; G_xi ~ PY(axi, N(mxi,Sxi))
     Sxi = 25, # large to favor assignment of common effect to patients instead of protein
-    axi = 1,
-    bxi = -0.1, #0.05 # 0 as a DP
+    axi = 0.1,
+    bxi = 0.1, # # 0 as a DP
     ## hyperpars theta=sig2
     asig = 1,
     bsig = 5) ## w=1/sigs ~ Ga(asig/2, bsig/2); E(w) = m=a/b, V(w)=m/(b/2)
@@ -156,7 +156,7 @@ prior = list(
 
 # Run MCMC
 if (FALSE){
-  main_reg(100)
+  main_reg(6000)
 }
 
 # Plots in the paper
@@ -182,15 +182,16 @@ P  = plot_grid(P1, P201, P1201, P2201)
 # Individual plot       
 P  = P +
   draw_label("ages", x= 0.52, y=  0, vjust=-0.5, angle= 0) +
-  draw_label("Y", x=  0, y=0.55, vjust= 1.5, angle=90)
+  draw_label("Y",    x=  0, y=0.55, vjust= 1.5, angle=90)
 P
 
 ######### Normal- QQtest #####################
 chain = mcmc[,-1]
-colnames(chain) = c("it", "SSM", "sig2", "K-pat", "K-prot", paste("nk",1:5,sep=""), paste("nk",1:5,sep=""))
+colnames(chain) = c("it", "SSM", "sig2", "K-prot", "K-pat", paste("nk",1:5,sep=""), paste("nk",1:5,sep=""))
 
-# I am confused
+# Check
 summary(chain$`K-pat`)
+summary(chain$`K-prot`)
 # What is ``it''?
 
 chain
