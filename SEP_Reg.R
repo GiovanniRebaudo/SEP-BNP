@@ -88,6 +88,7 @@ library(reshape2)
 # That's my personal ones to get the right graphics par's
 # maxDiff_reg() find the proteins with largest difference across time.
 
+set.seed(1992)
 source("SEP_fcts.R")
 
 ## global variables for the dta
@@ -118,7 +119,7 @@ prior = list(
     mxi = my,       ## xi[i] ~ G_xi; G_xi ~ PY(axi, N(mxi,Sxi))
     Sxi = 25, # large to favor assignment of common effect to patients instead of protein
     axi = 0.1,
-    bxi = 0.1, # # 0 as a DP
+    bxi = -0.1, # # 0 as a DP
     ## hyperpars theta=sig2
     asig = 1,
     bsig = 5) ## w=1/sigs ~ Ga(asig/2, bsig/2); E(w) = m=a/b, V(w)=m/(b/2)
@@ -166,24 +167,27 @@ load("Data-and-Results/yt.RData")
 of = maxDiff_reg()
 
 
-P1    = plt_reg_ggplot(T,T,F,1,case=T,ctr=T)
-P201  = plt_reg_ggplot(T,T,F,201,case=T,ctr=T)
-P1201 = plt_reg_ggplot(T,T,F,1201,case=T,ctr=T)
-P2201 = plt_reg_ggplot(T,T,F,2201,case=T,ctr=T)
+P1 = plt_reg_ggplot(T,T,F,1,case=T,ctr=T)
+P2 = plt_reg_ggplot(T,T,F,201,case=T,ctr=T)
+P3 = plt_reg_ggplot(T,T,F,1201,case=T,ctr=T)
+P4 = plt_reg_ggplot(T,T,F,2201,case=T,ctr=T)
 
 library(cowplot)
 
-P1    = P1    + theme(axis.title = element_blank())
-P201  = P201  + theme(axis.title = element_blank())
-P1201 = P1201 + theme(axis.title = element_blank())
-P2201 = P2201 + theme(axis.title = element_blank())
-P  = plot_grid(P1, P201, P1201, P2201) 
+P1 = P1 + theme(axis.title = element_blank())
+P2 = P2 + theme(axis.title = element_blank())
+P3 = P3 + theme(axis.title = element_blank())
+P4 = P4 + theme(axis.title = element_blank())
+P  = plot_grid(P1, P2, P3, P4) 
 
 # Individual plot       
 P  = P +
   draw_label("ages", x= 0.52, y=  0, vjust=-0.5, angle= 0) +
   draw_label("Y",    x=  0, y=0.55, vjust= 1.5, angle=90)
 P
+
+ggsave(plot=P, file ="Image/Ind_prot.pdf", 
+       width=20, height=12, units = 'cm')
 
 ######### Normal- QQtest #####################
 chain = mcmc[,-1]
@@ -192,15 +196,18 @@ colnames(chain) = c("it", "SSM", "sig2", "K-prot", "K-pat", paste("nk",1:5,sep="
 # Check
 summary(chain$`K-pat`)
 summary(chain$`K-prot`)
-# What is ``it''?
-
-chain
-
-
-
-
 
 
 plt_reg(F,T,F,of[1:20],case=T,ctr=T,dtatype="l")
 plt_reg_ggplot(F,T,F,of[1:20],case=T,ctr=T,dtatype="l")
+
+summary(chain$`sig2`)
+
+df <- data.frame(y = as.vector(yt)/mean(chain$`sig2`))
+P <- ggplot( df, aes(sample = y))
+P <- P + stat_qq() + stat_qq_line()
+
+ggsave(plot=P, file ="Image/qq_prot.pdf", 
+       width=12, height=12, units = 'cm')
+
 

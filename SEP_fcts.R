@@ -1199,8 +1199,8 @@ pltInit_reg = function()
 { ## in preparation for plt_reg(), read in all simulation summaries
   mcmc <<-  read.csv("Data-and-Results/chain.txt",header=T)
   Ey <<-  as.matrix( read.csv("Data-and-Results/Ey.txt", header=F) )
-  np=ncol(Ey)
-  my <<-  matrix(apply(Ey,1,mean),ncol=2) ## avg expression by condition (not used..)
+  np = ncol(Ey)
+  my <<-  matrix(apply(Ey,1,mean), ncol=2) ## avg expression by condition (not used..)
   My = apply(my,1,mean)                   ## overall avg profile (never used..)
   Ey <<-  array(Ey,dim=c(16,2,np))    ## for easier access below
   ## dimensions are: age, case, protein
