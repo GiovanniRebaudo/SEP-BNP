@@ -166,7 +166,6 @@ pltInit_reg()
 load("Data-and-Results/yt.RData")
 of = maxDiff_reg()
 
-
 P1 = plt_reg_ggplot(T,T,F,1,case=T,ctr=T)
 P2 = plt_reg_ggplot(T,T,F,201,case=T,ctr=T)
 P3 = plt_reg_ggplot(T,T,F,1201,case=T,ctr=T)
@@ -203,9 +202,12 @@ plt_reg_ggplot(F,T,F,of[1:20],case=T,ctr=T,dtatype="l")
 
 summary(chain$`sig2`)
 
-df <- data.frame(y = as.vector(yt)/mean(chain$`sig2`))
+
+df <- data.frame(y = as.vector(yt)/mean(sqrt(chain$`sig2`)))
 P <- ggplot( df, aes(sample = y))
 P <- P + stat_qq() + stat_qq_line()
+
+P
 
 ggsave(plot=P, file ="Image/qq_prot.pdf", 
        width=12, height=12, units = 'cm')

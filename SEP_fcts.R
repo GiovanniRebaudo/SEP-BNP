@@ -885,10 +885,12 @@ mdpOffset_reg = function(mdp,incr=F){
       offset[,idx] = X%*%mdp$betas[,k]
     }
   } # correct for protein effects (d=2)
-  if (incr)            ## additional correction (use for residual var)
+  if (incr){            ## additional correction (use for residual var)
     yt <<- yt-offset ## additional correction
-  else 
+  }
+  else {
     yt <<- y-offset  ## under d=1: repeating offset for each column (=prot)
+  }
   return(0)
 }
 
