@@ -121,8 +121,8 @@ prior = list(
     axi = 0.1,
     bxi = -0.1, # # 0 as a DP
     ## hyperpars theta=sig2
-    asig = 1,
-    bsig = 5) ## w=1/sigs ~ Ga(asig/2, bsig/2); E(w) = m=a/b, V(w)=m/(b/2)
+    asig = 2,
+    bsig = 2) ## w=1/sigs ~ Ga(asig/2, bsig/2); E(w) = m=a/b, V(w)=m/(b/2)
 
 
 
