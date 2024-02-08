@@ -167,17 +167,13 @@ load("Data-and-Results/yt.RData")
 of = maxDiff_reg()
 
 P1 = plt_reg_ggplot(T,T,F,1,case=T,ctr=T)
-P2 = plt_reg_ggplot(T,T,F,201,case=T,ctr=T)
-P3 = plt_reg_ggplot(T,T,F,1201,case=T,ctr=T)
-P4 = plt_reg_ggplot(T,T,F,2201,case=T,ctr=T)
+P2 = plt_reg_ggplot(T,T,F,1001,case=T,ctr=T)
 
 library(cowplot)
 
 P1 = P1 + theme(axis.title = element_blank())
 P2 = P2 + theme(axis.title = element_blank())
-P3 = P3 + theme(axis.title = element_blank())
-P4 = P4 + theme(axis.title = element_blank())
-P  = plot_grid(P1, P2, P3, P4) 
+P  = plot_grid(P1, P2) 
 
 # Individual plot       
 P  = P +
@@ -186,12 +182,33 @@ P  = P +
 P
 
 ggsave(plot=P, file ="Image/Ind_prot.pdf", 
-       width=20, height=12, units = 'cm')
+       width=20, height=8, units = 'cm')
 
 ######### Normal- QQtest #####################
 chain = mcmc[,-1]
 colnames(chain) = c("it", "SSM", "sig2", "K-prot", "K-pat", paste("nk",1:5,sep=""), paste("nk",1:5,sep=""))
 
+# Extra to delete
+# Reorder rows and columns (observations) of a dissimilarity matrix intra groups 
+# and possibly reorder also the groups (batch of observations)
+reorder_dismat <-  function(dismat, groups, order.groups=NULL){
+  # Use correlation between variables as distance
+  order.dis   = integer(0)
+  J           = length(unique(groups))
+  if(is.null(order.groups)){
+    order.j   = 1:J
+  } else {
+    order.j   = order.groups
+  }
+  for (j in order.j){
+    groups.j  = which(groups==j)
+    dd        = as.dist((1-dismat[groups.j, groups.j])/2)
+    hc        = hclust(dd)
+    order.dis = c(order.dis, hc$order+length(order.dis))
+  }
+  dismat      = dismat[order.dis, order.dis]
+  dismat      = dismat[nrow(dismat):1,]
+}
 # Check
 summary(chain$`K-pat`)
 summary(chain$`K-prot`)
@@ -213,3 +230,45 @@ ggsave(plot=P, file ="Image/qq_prot.pdf",
        width=12, height=12, units = 'cm')
 
 
+
+sProt <- read.csv("./Data-and-Results/sProt.txt", header=FALSE)
+# Leggi senza virgole
+colnames(sProt) = c("prot","cl")
+sProt[,"prot"]  = factor(sProt[,"prot"]) 
+Clust_prot_mat = matrix(NA, nrow=nrow(sProt)/C, ncol=C) 
+colnames(Clust_prot_mat) = levels(sProt[,"prot"])
+for (lev in levels(sProt[,"prot"])){
+  Clust_prot_mat[,lev] = sProt[sProt[,"prot"]==lev,"cl"]
+}
+
+Plot_heat_vertex <- function(dissimlar_stable = dissimlar_stable,
+                             N_S_map          = N_S_map){
+  dismat      = round(dissimlar_stable, 2)
+  dismat      = reorder_dismat(dismat,groups=rep(1, N_S_map))
+  plot_dismat = reshape2::melt(dismat)
+  ggplot(data=plot_dismat, aes(x=factor(Var1), y=factor(Var2), fill=value))+ 
+    geom_tile() + theme_bw()+ 
+    scale_y_discrete(limits = seq(N_S_map, 1),
+                     breaks = floor(seq(1,N_S_map,length.out = 9)), 
+                     labels = floor(seq(1,N_S_map,length.out = 9))) +
+    scale_x_discrete(breaks = floor(seq(1,N_S_map,length.out = 9)), 
+                     labels = floor(seq(1,N_S_map,length.out = 9))) +
+    xlab("observation")+ylab("observation")+
+    scale_fill_gradientn(colours = c("white", "yellow", "red"), 
+                         values = rescale(c(0,0.25,1)), space = "Lab", name="")+
+    theme(legend.position = "right", text = element_text(size=20))
+}
+
+library(salso)
+library(reshape2)  
+library(scales)
+library(plyr)          # version 1.8.8
+# Compute probability of co-clustering of cells assigned to vertices
+dissimlar_stable = psm(Clust_prot_mat)
+
+# Posterior probabilities of co-clustering of obs assigned to vertices.
+# (Figure 2b in the main manuscript)
+Plot_2b = Plot_heat_vertex(dissimlar_stable = as.matrix(dissimlar_stable),
+                           N_S_map          = C)
+
+table(sProt[,"cl"])

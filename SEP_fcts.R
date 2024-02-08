@@ -1303,18 +1303,25 @@ maxDiff_reg = function()
 }
 
 ### plot ggplot reg
-plt_reg_ggplot = function(fit=T, dta=F, prot=F, idx=NULL, 
-                          lw=0.5, pltm=F, case=F,ctr=T, dtatype="p"){
+plt_reg_ggplot = function(fit=T, 
+                          dta=F, 
+                          prot=F, 
+                          idx=NULL, 
+                          lw=0.5, 
+                          pltm=F, 
+                          case=F,
+                          ctr=T, 
+                          dtatype="p"){
   np = ncol(Ey)
   npat = nrow(Ey)
   pltmch = ifelse(pltm,"line","n")
+  I=length(idx)
   
   if (is.null(idx)){
     idx=sample(1:np,10,replace=F)
   }
   if (fit | dta){
     ## fitted lines
-    I=length(idx)
     if(pltmch=="n"){
       df= data.frame(ages, my)
       Plot = ggplot(data=df, aes(x=X1,y=X1.1))+
@@ -1403,6 +1410,9 @@ plt_reg_ggplot = function(fit=T, dta=F, prot=F, idx=NULL,
         geom_line(data=df, aes(x = ages, y = value, group = variable, 
                                color = "pink"), size = 1, linetype = 2)
     }
+  }
+  if (I==1){
+    Plot =Plot + scale_colour_manual(values=c("black",1), guide=FALSE)
   }
   return(Plot)
 }
