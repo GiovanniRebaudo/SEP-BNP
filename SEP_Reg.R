@@ -188,30 +188,12 @@ ggsave(plot=P, file ="Image/Ind_prot.pdf",
 chain = mcmc[,-1]
 colnames(chain) = c("it", "SSM", "sig2", "K-prot", "K-pat", paste("nk",1:5,sep=""), paste("nk",1:5,sep=""))
 
-# Extra to delete
-# Reorder rows and columns (observations) of a dissimilarity matrix intra groups 
-# and possibly reorder also the groups (batch of observations)
-reorder_dismat <-  function(dismat, groups, order.groups=NULL){
-  # Use correlation between variables as distance
-  order.dis   = integer(0)
-  J           = length(unique(groups))
-  if(is.null(order.groups)){
-    order.j   = 1:J
-  } else {
-    order.j   = order.groups
-  }
-  for (j in order.j){
-    groups.j  = which(groups==j)
-    dd        = as.dist((1-dismat[groups.j, groups.j])/2)
-    hc        = hclust(dd)
-    order.dis = c(order.dis, hc$order+length(order.dis))
-  }
-  dismat      = dismat[order.dis, order.dis]
-  dismat      = dismat[nrow(dismat):1,]
-}
+
+# Ranking proteins
+
 # Check
-summary(chain$`K-pat`)
-summary(chain$`K-prot`)
+table(chain$`K-pat`)
+table(chain$`K-prot`)
 
 
 plt_reg(F,T,F,of[1:20],case=T,ctr=T,dtatype="l")
@@ -226,10 +208,7 @@ P <- P + stat_qq() + stat_qq_line()
 
 P
 
-ggsave(plot=P, file ="Image/qq_prot.pdf", 
-       width=12, height=12, units = 'cm')
-
-
+ggsave(plot=P, file ="Image/qq_prot.pdf", width=12, height=12, units = 'cm')
 
 sProt <- read.csv("./Data-and-Results/sProt.txt", header=FALSE)
 # Leggi senza virgole
@@ -241,34 +220,52 @@ for (lev in levels(sProt[,"prot"])){
   Clust_prot_mat[,lev] = sProt[sProt[,"prot"]==lev,"cl"]
 }
 
-Plot_heat_vertex <- function(dissimlar_stable = dissimlar_stable,
-                             N_S_map          = N_S_map){
-  dismat      = round(dissimlar_stable, 2)
-  dismat      = reorder_dismat(dismat,groups=rep(1, N_S_map))
-  plot_dismat = reshape2::melt(dismat)
-  ggplot(data=plot_dismat, aes(x=factor(Var1), y=factor(Var2), fill=value))+ 
-    geom_tile() + theme_bw()+ 
-    scale_y_discrete(limits = seq(N_S_map, 1),
-                     breaks = floor(seq(1,N_S_map,length.out = 9)), 
-                     labels = floor(seq(1,N_S_map,length.out = 9))) +
-    scale_x_discrete(breaks = floor(seq(1,N_S_map,length.out = 9)), 
-                     labels = floor(seq(1,N_S_map,length.out = 9))) +
-    xlab("observation")+ylab("observation")+
-    scale_fill_gradientn(colours = c("white", "yellow", "red"), 
-                         values = rescale(c(0,0.25,1)), space = "Lab", name="")+
-    theme(legend.position = "right", text = element_text(size=20))
-}
 
 library(salso)
 library(reshape2)  
 library(scales)
 library(plyr)          # version 1.8.8
-# Compute probability of co-clustering of cells assigned to vertices
-dissimlar_stable = psm(Clust_prot_mat)
+# Compute probability of co-clustering of prot
+dissimlar = psm(Clust_prot_mat)
+VI_prot   = salso::salso(Clust_prot_mat,   loss=VI(), nCores = 4,  
+                         maxNClusters = 21,
+                         maxZealousAttempts = 100)
+table(VI_prot)
+dissimlar_ord_prot = reorder_dismat(dissimlar,VI_prot)
 
-# Posterior probabilities of co-clustering of obs assigned to vertices.
-# (Figure 2b in the main manuscript)
-Plot_2b = Plot_heat_vertex(dissimlar_stable = as.matrix(dissimlar_stable),
-                           N_S_map          = C)
 
-table(sProt[,"cl"])
+library(Cairo)
+CairoPNG(filename ='Image/coclust_prot.png', width = 500, height = 500)
+# Posterior probabilities of co-clustering of prot 
+heatmap(dissimlar_ord_prot, Rowv = NA, Colv = NA, scale='none', 
+        labRow = FALSE, labCol = FALSE,
+        main="proteins prob coclust")
+invisible(dev.off())
+
+sPat <- read.csv("./Data-and-Results/sPat.txt", header=FALSE)
+# Leggi senza virgole
+colnames(sPat) = c("pat","cl")
+sPat[,"pat"]  = factor(sPat[,"pat"]) 
+Clust_pat_mat = matrix(NA, nrow=nrow(sPat)/R, ncol=R) 
+colnames(Clust_pat_mat) = levels(sPat[,"pat"])
+for (lev in levels(sPat[,"pat"])){
+  Clust_pat_mat[,lev] = sPat[sPat[,"pat"]==lev,"cl"]
+}
+
+# Compute probability of co-clustering of pat
+dissimlar = psm(Clust_pat_mat)
+VI_pat    = salso::salso(Clust_pat_mat,   loss=VI(), nCores = 4,  
+                         maxNClusters = 21,
+                         maxZealousAttempts = 100)
+table(VI_pat)
+dissimlar_ord_pat  = reorder_dismat(dissimlar, VI_pat)
+
+CairoPNG(filename ='Image/coclust_pat.png', width = 500, height = 500)
+# Posterior probabilities of co-clustering of pat 
+heatmap(dissimlar_ord_pat, Rowv = NA, Colv = NA, scale='none', 
+        labRow = FALSE, labCol = FALSE,
+        main="pat prob coclust")
+invisible(dev.off())
+
+
+

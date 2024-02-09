@@ -669,37 +669,15 @@ plt.Gkbar  <- function()
   }
 }
 
-# Reorder rows and columns (observations) of a dissimilarity matrix intra groups 
-# and possibly reorder also the groups (batch of observations)
-reorder_dismat <-  function(dismat, groups, order.groups=NULL){
-  # Use correlation between variables as distance
-  order.dis   = integer(0)
-  J           = length(unique(groups))
-  if(is.null(order.groups)){
-    order.j   = 1:J
-  } else {
-    order.j   = order.groups
-  }
-  for (j in order.j){
-    groups.j  = which(groups==j)
-    dd        = as.dist((1-dismat[groups.j, groups.j])/2)
-    hc        = hclust(dd)
-    order.dis = c(order.dis, hc$order+length(order.dis))
-  }
-  dismat      = dismat[order.dis, order.dis]
-  dismat      = dismat[nrow(dismat):1,]
-}
-
-## Function to plot the heatmap of the posterior probabilities of co-clustering
-## of obs assigned to vertices
 Plot_heat <- function(dissimlar_stable = dissimlar_stable,
                       I          = B){
   dismat      = round(dissimlar_stable, 2)
   dismat      = reorder_dismat(dismat,groups=rep(1,I))
   plot_dismat = reshape2::melt(dismat)
   ggplot(data=plot_dismat, aes(x=factor(Var1), y=factor(Var2), fill=value)) + 
-    geom_tile()+ theme_bw()+ 
-    scale_y_discrete(breaks = floor(seq(1, I, length.out = 9)), 
+    geom_tile() + theme_bw()+ 
+    scale_y_discrete(limits=floor(seq(I, 1)),
+                     breaks = floor(seq(1, I, length.out = 9)), 
                      labels = floor(seq(1, I, length.out = 9))) +
     scale_x_discrete(breaks = floor(seq(1, I, length.out = 9)), 
                      labels = floor(seq(1, I, length.out = 9))) +
@@ -708,6 +686,19 @@ Plot_heat <- function(dissimlar_stable = dissimlar_stable,
                          values = rescale(c(0, 0.5, 1)), 
                          space = "Lab", name="") +
     theme(legend.position = "right", text = element_text(size=20))
+}
+
+# Reorder rows and columns (observations) of a dissimilarity matrix 
+# given a point estimate of the clustering of the obs (batch of observations)
+reorder_dismat <-  function(dismat, point_clust){
+  ord_lab = c()
+  one_nobs  = 1:nrow(dismat)
+  for (cl in unique(point_clust)){
+    which_lab = which(point_clust==cl)
+    ord_lab = c(ord_lab, one_nobs[which_lab])
+  }
+  dissimlar_ord = dismat[ord_lab, ord_lab]
+  return(dissimlar_ord)
 }
 
 #### Functions for protein regression

@@ -247,7 +247,7 @@ P = ggplot(LL2)+
   theme_bw()+scale_color_manual("Subject\nCluster",
                                 values = c(2,4,1,6,5)) + ylim(0, 1)+
   xlab("Taxa sorted by count")+ylab("Cumulative Relative Frequncy")
-ggsave(plot=P, file="Image/Sjclustergg2.pdf", height = 2.5, width = 4)    
+# ggsave(plot=P, file="Image/Sjclustergg2.pdf", height = 2.5, width = 4)    
 
 #### Plot heatmaps
 point_SJ = salso::salso(Sj, nRuns = 100, maxZealousAttempts = 100, loss=VI())
@@ -280,10 +280,31 @@ PSM1 = psm(t(mki[1,,]))
 PSM2 = psm(t(mki[2,,]))
 PSM3 = psm(t(mki[3,,]))
 
+# Reorder rows and columns (observations) of a dissimilarity matrix intra groups 
+# and possibly reorder also the groups (batch of observations)
+reorder_dismat_j <-  function(dismat, groups, order.groups=NULL){
+  # Use correlation between variables as distance
+  order.dis   = integer(0)
+  J           = length(unique(groups))
+  if(is.null(order.groups)){
+    order.j   = 1:J
+  } else {
+    order.j   = order.groups
+  }
+  for (j in order.j){
+    groups.j  = which(groups==j)
+    dd        = as.dist((1-dismat[groups.j, groups.j])/2)
+    hc        = hclust(dd)
+    order.dis = c(order.dis, hc$order+length(order.dis))
+  }
+  dismat      = dismat[order.dis, order.dis]
+  dismat      = dismat[nrow(dismat):1,]
+}
+
 Plot_heat <- function(dissimlar_stable = dissimlar_stable,
                       I          = B){
   dismat      = round(dissimlar_stable, 2)
-  dismat      = reorder_dismat(dismat,groups=rep(1,I))
+  dismat      = reorder_dismat_j(dismat,groups=rep(1,I))
   plot_dismat = reshape2::melt(dismat)
   ggplot(data=plot_dismat, aes(x=factor(Var1), y=factor(Var2), fill=value)) + 
     geom_tile() + theme_bw()+ 
@@ -308,8 +329,8 @@ P3 = Plot_heat(PSM3, B) + xlab("") + ylab("")
 PHeat <- ggarrange(P1, P2, P3, labels = c("1", "2", "3"), nrow=1,
                    widths = c(1, 1, 1.2))
 
-ggsave(plot=PHeat, file="Image/mik_coclusterprob_sorted2.pdf", 
-       width=15, height=4.5)
+# ggsave(plot=PHeat, file="Image/mik_coclusterprob_sorted2.pdf", 
+       # width=15, height=4.5)
 
 Point_Mki1 = salso::salso(t(mki[1,,]), nRuns = 100, 
                           maxZealousAttempts = 100, loss=VI())
@@ -337,5 +358,5 @@ P = ggplot(Zmelts,aes(Var2,Var1,fill=value)) +
     axis.text.y = element_blank())+
   labs(y= "OTU", x = "Subject") 
 
-ggsave(plot=P, file="Image/mb-heatmap-y2.pdf", height = 5, width = 6)    
+# ggsave(plot=P, file="Image/mb-heatmap-y2.pdf", height = 5, width = 6)    
 
