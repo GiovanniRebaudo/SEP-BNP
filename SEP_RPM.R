@@ -194,10 +194,13 @@ ggsave(plot=P, file ="Image/otu-subject-hc.pdf",
 # Run analysis, save results and produce some plots
 Run_MCMC = FALSE
 if(Run_MCMC){
+  verbose_step = max(round(1e4/20),1)
+  startTime = Sys.time()
   ex(niter  = 1e4, #iteration MCMC
      niter0 = 1e3, # estimating Sj after niter0 iterations and stop updating Sj
-     niter1 = 2e3 # just for plot 
+     niter1 = 2e3  # just for plot 
   ) 
+  timeRPM = difftime(Sys.time(), startTime, units=("secs"))[[1]]
 }
 
 # Load output
@@ -255,7 +258,7 @@ if(length(unique(point_SJ))!=3){
   print("Adapt plot code for number of clusters different than 3")
   stop()}
 
-# TBD mki to be corrected
+# 
 niter  = 1e4 #iteration MCMC
 niter0 = 1e3 # estimating Sj after niter0 iterations and stop updating Sj
 niter1 = 2e3 # just for plot 

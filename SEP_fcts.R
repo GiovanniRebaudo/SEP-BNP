@@ -463,7 +463,7 @@ mcmc  <- function(niter=1000, pi, w, Sj, mki, mu, sig2, niter0=500)
     if (iter %% 10 == 0){ # save every 10th iter
       pmki = nmki/Nmki
       writeMCMC(iter, pi, Sj, w, mki, mu, sig2=sig2, ll=last_ll, pmki=pmki)
-      plt.Gk(w, mu, sig2, add, Sj)
+      # plt.Gk(w, mu, sig2, add, Sj)
       add=F
       print(iter)
     }
@@ -546,9 +546,9 @@ ex <- function(niter=2000, niter0=250, niter1=500){
   mki = init.Mki(mu,sig2,Sj,w)
   
   Sj = mcmc(niter, pi=pi,w=w,Sj=Sj,mki=mki,mu=mu,sig2=sig2, niter0=niter0)
-  klist = fig4(niter,niter0,niter1)
+  # klist = fig4(niter,niter0,niter1)
   # rcR(1,2)
-  fig5(klist, niter,niter0,niter1)
+  # fig5(klist, niter,niter0,niter1)
 } 
 
 #######################################################
@@ -806,7 +806,7 @@ mcmcUpd_reg = function(mdpEta, mdpXi,it){
   nkProt = sort( table(mdpEta$s), dec=T)[1:5]
   nkPat  = sort( table(mdpXi$s),  dec=T)[1:5]
   nkProt = ifelse(is.na(nkProt),0,nkProt) # replace NA's by 0
-  nkPat = ifelse(is.na(nkPat),0,nkPat)
+  nkPat  = ifelse(is.na(nkPat),0,nkPat)
   
   line = c(it, SSM, mdpXi$sigs, mdpEta$K, mdpXi$K, nkProt, nkPat)
   names(line) = c("it", "SSM", "sig2", "K-prot", "K-pat", paste("nk",1:5,sep=""), paste("nk",1:5,sep=""))
