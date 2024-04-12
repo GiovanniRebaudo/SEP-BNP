@@ -834,6 +834,8 @@ mcmcUpd_reg = function(mdpEta, mdpXi,it){
     ## Save all, otherwise save only the first 250 proteins if it is enough
     filesAppend <<- TRUE # from now on append those three files..
     ## the files below are always overwritten
+    
+    ## We can save them in a faster way if needed (TBD)
     write.table(format(Ey/nEy), "Data-and-Results/Ey.txt", quote=F,
                 col.names=F, row.names=F, sep=",")
     write.table(format(Ey2/nEy), "Data-and-Results/Ey2.txt",

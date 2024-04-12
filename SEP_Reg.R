@@ -157,7 +157,9 @@ prior = list(
 
 # Run MCMC
 if (FALSE){
+  startTime = Sys.time()
   main_reg(6000)
+  timeREG = difftime(Sys.time(), startTime, units=("secs"))[[1]]
 }
 
 # Plots in the paper
@@ -181,8 +183,8 @@ P  = P +
   draw_label("Y",    x=  0, y=0.55, vjust= 1.5, angle=90)
 P
 
-ggsave(plot=P, file ="Image/Ind_prot.pdf", 
-       width=20, height=8, units = 'cm')
+#ggsave(plot=P, file ="Image/Ind_prot.pdf", 
+#       width=20, height=8, units = 'cm')
 
 ######### Normal- QQtest #####################
 chain = mcmc[,-1]
