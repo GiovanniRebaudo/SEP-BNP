@@ -422,7 +422,7 @@ niter=500; iter=0
 mcmc  <- function(niter=1000, pi, w, Sj, mki, mu, sig2, niter0=500)
 {#### MCMC
   ## estimate Sj after niter0 iterations, and stop updating Sj
-  last_ll=check.ll("update_w", lastll= -1e10, mu,sig2,Sj,mki,w,pi,post=T)-100000
+  last_ll=check.ll("update_w", lastll= -1e10, mu, sig2, Sj, mki, w, pi, post=T)-100000
   writeMCMC(0,pi=pi,Sj=Sj,w=w,mki=mki,mu=mu,sig2=sig2,ll=last_ll,app=F,pmki=0)
   nmki = 0  # keep track of n of moves of mki
   Nmki = 0  # n of transitions (=iter * K+ * L)

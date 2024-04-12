@@ -354,12 +354,26 @@ Zmelts <- rbind(
 Zmelts$Var1 = as.factor(as.integer(Zmelts$Var1))
 
 P = ggplot(Zmelts,aes(Var2,Var1,fill=value)) +
-  geom_raster() + theme_bw()+ 
+  geom_raster() + theme_bw() + 
   facet_wrap(.~point_SJ, scales = "free")+
-  scale_fill_viridis_c()+
+  scale_fill_viridis_c() +
   theme(axis.text.x = element_blank(),
-    axis.text.y = element_blank())+
+    axis.text.y = element_blank()) +
   labs(y= "OTU", x = "Subject") 
 
 # ggsave(plot=P, file="Image/mb-heatmap-y2.pdf", height = 5, width = 6)    
 
+
+### Check log-likelihood
+ll_out = double(dim(mu)[1]-niter1/10)
+for(iter in 1:length(ll_out)){
+  ll_out[iter] = ll_fun(mu[niter1/10+iter,], sig2[niter1/10+iter,], 
+                        Sj[niter1/10+iter,], 
+                        mki[,,iter], w=NULL, pi=NULL, post=F)
+}
+
+data_ll = data.frame(cbind(1:length(ll_out), ll_out-max(ll_out)))
+P = ggplot(data=data_ll, aes(x=X1, y=X2)) +
+     geom_line()+xlab("iter")+ylab("log lik")
+
+# ggsave(plot=P, file="Image/ll_rpm.pdf", height = 3, width = 6)    
