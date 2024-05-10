@@ -88,41 +88,48 @@ library(reshape2)
 # That's my personal ones to get the right graphics par's
 # maxDiff_reg() find the proteins with largest difference across time.
 
-set.seed(1992)
+set.seed(135)
 source("SEP_fcts.R")
 
 ## global variables for the dta
-out = readDta_reg(file="Data-and-Results/data_protein.RData") 
-## make global vars for the data
+out = readDta_reg("Data-and-Results/") ## make global vars for the data
 X = out$X
 y = out$y
+## data corrected for patient and/or prot effects (used in MCMC)
+yXi  = 0   ## y - (pat effects) (used to update eta)
+yEta = 0   ## y - (prot effs) (to update xi)
+yEtaXi = 0 ## y - (pat & prot effects) (used to update sigs;
+###                          and to evaluate loglik)
 my = mean(y,na.rm=T)
 sy =  mean(apply(y,2,var,na.rm=T))
 ages = out$ages ## age grid (for plotting)
 ## boxplot(apply(y,2,mean,na.rm=T))
 ## boxplot(sqrt(apply(y,2,var,na.rm=T)))
 
-C=out$C
-R=out$R
-p=out$p
+C=out$C ## n columns = n proteins
+R=out$R ## n rows = n patients
+p=out$p ## dim of design vector for protein effect regression
 ## R= # patients (=# time points x2); C=  #proteins
 
+## for debugging
+logl <- 0   # will keep track of log likelihood
+oldlogl  <- 0
 
 ## prior pars
 prior = list(
-    ## column effects (proteins)
-    meta = rep(0,p),
-    Seta = diag(p),  ## might want to reduce var of trt offsets (2nd part)
-    aeta = 1,        ## eta[j] ~ G_eta; G_eta ~ PY(aeta, N(meta,Seta))
-    beta = 0.05, #- discount parameter
-    ## row effects (patients)
-    mxi = my, ## xi[i] ~ G_xi; G_xi ~ PY(axi, N(mxi,Sxi))
-    Sxi = 25, # large to favor assignment of common effect to patients instead of protein
-    axi = 0.1,
-    bxi = -0.1, # # 0 as a DP
-    ## hyperpars theta=sig2
-    asig = 2,
-    bsig = 2) ## w=1/sigs ~ Ga(asig/2, bsig/2); E(w) = m=a/b, V(w)=m/(b/2)
+  ## column effects (proteins)
+  meta = rep(0,p),
+  Seta = diag(p),  ## might want to reduce var of trt offsets (2nd part)
+  aeta = 1,        ## eta[j] ~ G_eta; G_eta ~ PY(aeta, beta, N(meta,Seta))
+  beta = 0.05,
+  ## row effects (patients)
+  mxi = my,       ## xi[i] ~ G_xi; G_xi ~ PY(axi, bxi, N(mxi,Sxi))
+  Sxi = 1,
+  axi = 1,
+  bxi = 0.05,
+  ## hyperpars theta=sig2
+  asig = 1,
+  bsig = 5) ## w=1/sigs ~ Ga(asig/2, bsig/2); E(w) = m=a/b, V(w)=m/(b/2)
 
 
 
@@ -158,7 +165,7 @@ prior = list(
 # Run MCMC
 if (FALSE){
   startTime = Sys.time()
-  main_reg(6000)
+  main_reg(20000)
   timeREG = difftime(Sys.time(), startTime, units=("secs"))[[1]]
 }
 

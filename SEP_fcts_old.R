@@ -735,7 +735,6 @@ readDta_reg = function(file="data_protein.RData"){
   ## tried the same for patients --
   ##        but turns out hclust is ok with all patients as is
   
-  
   ## total number of proteins
   C=dim(y)[2]
   
@@ -749,56 +748,31 @@ readDta_reg = function(file="data_protein.RData"){
 
 main_reg = function(niter=100){
   ## main driver
-  ## before updating eta, xi or sigs make sure to update yXi, yEta & yEtaXi
-  
   sigs = 1/ (prior$asig/prior$bsig) ## prior mean for residual var
-  mdpEta = mdpInit(2,C,q=p, mbeta=prior$meta, Sbeta=prior$Seta,
-                   a=prior$aeta, b=prior$beta, sigs=sigs)      # protein effects eta[j]
-  ### initializes with K=1 single cluster
-  mdpXi =  mdpInit(1,R,q=1, mbeta=prior$mxi, Sbeta=prior$Sxi,  
-                   a=prior$axi, b=prior$bxi, sigs=sigs)        # pat effects xi[i]
-  ### initializes with K=1 single cluster
-  ## next initialize patient partitions using all singleton clusters:
-  mdpOffset(mdpEta)
-  mdpXi  = mdpInitClust(mdpXi, R) # all singleton clusters
-  ## next initialize protein partitions using hclust;
-  ## in mdpInit they were initialized with K=1 cluster
-  mdpOffset(mdpXi)
+  mdpEta = mdpInit_reg(2,C,q=p, mbeta=prior$meta, Sbeta=prior$Seta,
+                   a=prior$aeta, b=prior$beta, sigs=sigs)
+  mdpXi =  mdpInit_reg(1,R,q=1, mbeta=prior$mxi, Sbeta=prior$Sxi,
+                   a=prior$axi, b=prior$bxi, sigs=sigs)
+  ## initialize partitions using hclust;
+  ## in mdpInit_reg they were initialized with K=1 cluster
+  mdpOffset_reg(mdpEta)
+  mdpXi  = mdpInitClust_reg(mdpXi, R) # all singleton clusters
+  mdpOffset_reg(mdpXi)
   Kmax = if(mdpEta$b>0) round( mdpEta$a/mdpEta$b ) else 20
-  mdpEta = mdpInitClust(mdpEta, Kmax)
+  mdpEta = mdpInitClust_reg(mdpEta, Kmax)
   
-  mcmcInit()
-  mdpOffset(mdpXi) # updates global yXi = y - pat effects (not really needed..)
+  mcmcInit_reg()
   for(it in 1:niter){
-    mdpEta = mdpUpdate(mdpEta,niter=500)
-    mdpOffset(mdpEta)         # updates global yEta and yEtaXi
-    ## debugging ----------------------------
-    ## updateSigs(mdpXi)         # just to evaluate logl & old logl
-    ## debugLogl(it,"upd(eta)")  # debugging.. 
-    mdpXi = mdpUpdate(mdpXi)
-    mdpOffset(mdpXi)          # update yXi and yEtaXi
-    mdpXi$sigs  = updateSigs(mdpXi)
-    mdpEta$sigs = mdpXi$sigs  # need residual var in both
-    debugLogl(it,"upd(xi )")  # debugging.. 
+    mdpOffset_reg(mdpXi)  # updates global yt = y - pat effects
+    mdpEta = mdpUpdate_reg(mdpEta,niter=500)
+    mdpOffset_reg(mdpEta)  # updates global yt = y - prot effects
+    mdpXi = mdpUpdate_reg(mdpXi)
+    mdpOffset_reg(mdpXi,incr=T)  # yt = y - (pat effects + prot effects)
+    mdpXi$sigs = updateSigs_reg(mdpXi)
+    mdpEta$sigs = mdpXi$sigs    # need residual var in both
     if (it %% 10==0)
-      mcmcUpd(mdpEta,mdpXi,it)
+      mcmcUpd_reg(mdpEta,mdpXi,it)
   }# it
-}
-
-## 2 functions just for debugging ----------------------------
-debugLogl_reg = function(it,msg){
-  if (it < 10) return(0) # burn-in
-  if (logl < oldlogl-5000)
-    cat("\n *** it ", format(it), "after ", msg, "; logl=",format(logl),
-        "(",format(oldlogl),") \n")
-}
-
-prtLogl_reg = function(){ # debugging only -- make sure mdpEta & mdpXi are global
-  mdpOffset(mdpEta)  # updates global yt = y - prot effects
-  mdpOffset(mdpXi,incr=T)  # yt = y - (pat effects + prot effects)
-  updateSigs(mdpXi)
-  cat("logl = ", format(logl), "(", format(oldlogl),").\n")
-  return(logl)
 }
 
 mcmcInit_reg = function(){
@@ -808,7 +782,7 @@ mcmcInit_reg = function(){
   Eyp <<- Ey
   Eyp2 <<- Ey
   nEy <<- 0        # number of updates (Ey and Ey2 are running sums -- divide by nEy for plotting)
-  SSM <<- 0        # mean residual SS (updated in updateSigs)
+  SSM <<- 0        # mean residual SS
   chain <<- NULL # collect summaries at each iteration
   ## it, SSM, sig2, K-pat, K-prot, nk-pat*, nk-prot* (nk*: 5 largest cluster sizes, padded with 0's if needed)
   filesAppend <<- F # init the files at first write
@@ -819,46 +793,60 @@ mcmcUpd_reg = function(mdpEta, mdpXi,it){
   ## updates global summaries and writes to file (if desired..)
   ## prints out summary at iteration
   
+  if(F){
   ## print summaries
   cat(it, "\t K-Prot=",mdpEta$K," (",table(mdpEta$s),"), \n avg(betas)=",
       format(apply(mdpEta$betas,1,mean),digits=2),"\n")
   cat("\t K-Pat= ",mdpXi$K," (",table(mdpXi$s),") avg(betas)=",
       format(mean(mdpXi$betas),digits=2),"\t")
-  cat("sig=", format(sqrt(mdpXi$sigs)),"   SSM=", format(SSM), " logl=", format(logl),"\n")
-  ## note: SSM is updated in updateSigs (as global var -- dirty programming :-(
+  cat("sig=", format(sqrt(mdpXi$sigs)),"   SSM=", format(SSM), "\n")
+  }
   
   ## summaries
   nkProt = sort( table(mdpEta$s), dec=T)[1:5]
   nkPat  = sort( table(mdpXi$s),  dec=T)[1:5]
   nkProt = ifelse(is.na(nkProt),0,nkProt) # replace NA's by 0
-  nkPat = ifelse(is.na(nkPat),0,nkPat)
+  nkPat  = ifelse(is.na(nkPat),0,nkPat)
   
-  line = c(it, SSM, logl, mdpXi$sigs, mdpEta$K, mdpXi$K, nkProt, nkPat)
-  names(line) = c("it", "SSM", "logl", "sig2", "K-prot", "K-pat", paste("nk",1:5,sep=""), paste("nk",1:5,sep=""))
+  line = c(it, SSM, mdpXi$sigs, mdpEta$K, mdpXi$K, nkProt, nkPat)
+  names(line) = c("it", "SSM", "sig2", "K-prot", "K-pat", paste("nk",1:5,sep=""), paste("nk",1:5,sep=""))
   chain <<- rbind(chain,line)
   ## it, SSM, sig2, K-pat, K-prot, nk-pat*, nk-prot* (nk*: 5 largest cluster sizes, padded with 0's if needed)
   
   ## updated fitted summaries
-  yhat = mdpFitted(mdpEta, mdpXi)
-  yphat = mdpFitted(mdpEta, fitProt=T)
+  yhat = mdpFitted_reg(mdpEta, mdpXi)
+  yphat = mdpFitted_reg(mdpEta, fitProt=T)
   Ey <<- Ey+yhat
   Ey2 <<- Ey2+yhat*yhat
   Eyp <<- Eyp+yphat
   Eyp2 <<- Eyp2+yphat*yphat
   nEy <<- nEy+1
+  # browser()
   if (it %% 50 == 0){
     options(digits=2)
-    write.table(chain,"chain.txt",sep=",",append=F, col.names=T,row.names=F)
-    write.table(t(c(mdpXi$s)),"sPat.txt",sep=",",append=filesAppend, col.names=!filesAppend)
-    write.table(t(c(mdpEta$s[1:250])), "sProt.txt",sep=",",append=filesAppend, col.names=!filesAppend)
-    ## save only the first 250 proteins -- seems enough :-)
+    write.table(chain,"Data-and-Results/chain.txt",sep=",",append=F, 
+                col.names=!file.exists("Data-and-Results/chain.txt"))
+    write.table(mdpXi$s,"Data-and-Results/sPat.txt",sep=",",append=filesAppend, 
+                col.names=!file.exists("Data-and-Results/sPat.txt"))
+    write.table(mdpEta$s, #[1:250],
+                "Data-and-Results/sProt.txt",sep=",",append=filesAppend,
+                col.names=!file.exists("Data-and-Results/sProt.txt"))
+    ## Save all, otherwise save only the first 250 proteins if it is enough
     filesAppend <<- TRUE # from now on append those three files..
     ## the files below are always overwritten
-    write.table(format(Ey/nEy),"Ey.txt",quote=F,col.names=F,row.names=F,sep=",")
-    write.table(format(Ey2/nEy),"Ey2.txt",quote=F,col.names=F,row.names=F,sep=",")
-    write.table(format(Eyp/nEy),"Eyp.txt",quote=F,col.names=F,row.names=F,sep=",")
-    write.table(format(Eyp2/nEy),"Eyp2.txt",quote=F,col.names=F,row.names=F,sep=",")
+    
+    ## We can save them in a faster way if needed (TBD)
+    write.table(format(Ey/nEy), "Data-and-Results/Ey.txt", quote=F,
+                col.names=F, row.names=F, sep=",")
+    write.table(format(Ey2/nEy), "Data-and-Results/Ey2.txt",
+                quote=F, col.names=F, row.names=F,sep=",")
+    write.table(format(Eyp/nEy), "Data-and-Results/Eyp.txt",
+                quote=F, col.names=F, row.names=F, sep=",")
+    write.table(format(Eyp2/nEy), "Data-and-Results/Eyp2.txt", 
+                quote=F, col.names=F, row.names=F, sep=",")
+    print(it)
   }
+  save(yt,file="Data-and-Results/yt.RData")
   return(0)
 }
 
@@ -877,45 +865,27 @@ mdpFitted_reg = function(mdpEta, mdpXi=NULL, fitProt=F){
 
 mdpOffset_reg = function(mdp,incr=F){
   ## creates global variable
-  ## y<xxx> = y-xxx, where xxx are either protein effects (mdp$d=2, xxx="Eta")
-  ##    or patient effects (d=1, xxx="Xi"), and both (d=1 or 2, xxx="EtaXi")
-  ##   (the latter is used to update residual var)
-  ## corrected y is saved in "yEta" or "yXi" (depending on d)  and in "yEtaXi"
+  ## yt = y-xxx, where xxx are either protein effects (mdp$d=2),
+  ##   or patient effects (d=1), or both (mdp2 != NULL)
+  ##   (the latter is used to update residual var
+  ## if correcting for both, then mdp2 must be mdpXi!
   if (mdp$d==1){ # correcting for patient effects
     offset = mdp$betas[,mdp$s]
-    yXi <<- y-offset
-    yEtaXi <<- yEta-offset
   } else { # d=2, correcting for protein effects
     offset = 0*y         # initialize matrix of right size
     for(k in 1:mdp$K){
       idx = which(mdp$s==k)
       offset[,idx] = X%*%mdp$betas[,k]
     }
-    yEta <<- y-offset
-    yEtaXi <<- yXi-offset
   } # correct for protein effects (d=2)
+  if (incr){            ## additional correction (use for residual var)
+    yt <<- yt-offset ## additional correction
+  }
+  else {
+    yt <<- y-offset  ## under d=1: repeating offset for each column (=prot)
+  }
   return(0)
 }
-
-mdpInit_reg = function(d,M,q,
-           mbeta=rep(0,q),
-           Sbeta=diag(q),
-           a=1,b=0,
-           sigs=1){
-  ## initializes pars for a DP mix of normal lin regression
-  ## use initially K=1 cluster
-  Lbeta = solve(t(chol(Sbeta))) # Leta*S*Leta' = I :-)
-  Sibeta = solve(Sbeta)
-  Simbeta = Sibeta%*%mbeta
-  mdp = list(d=d,M=M,q=q,
-             s=rep(1,M), K=1,a=a,b=b,
-             betas=as.matrix(mbeta,ncol=1),
-             mbeta=mbeta, Sbeta=Sbeta, Sibeta=Sibeta,
-             Lbeta=Lbeta, Simbeta=Simbeta,
-             sigs=sigs)
-  return(mdp)
-}
-
 
 mdpSwap_reg = function(mdp,k1,k2){
   ## swaps clusters k1 vs k2
@@ -942,18 +912,36 @@ mdpInitClust_reg = function(mdp,K0){
     mdp$s = cutree(hc,k=K0)
     mdp$K = length(unique(mdp$s))
   }
-  mdp = mdpUpdB(mdp,spl=F)
+  mdp = mdpUpdB_reg(mdp,spl=F)
   return(mdp)
 }
 
 mdpUpdate_reg = function(mdp, niter=mdp$M){
-  mdp = mdpUpdS(mdp,niter)
-  mdp = mdpUpdB(mdp)
+  mdp = mdpUpdS_reg(mdp,niter)
+  mdp = mdpUpdB_reg(mdp)
   return(mdp)
 }
 
+mdpInit_reg = function(d,M,q,
+                   mbeta=rep(0,q),
+                   Sbeta=diag(q),
+                   a=1,b=0,
+                   sigs=1){
+  ## initializes pars for a DP mix of normal lin regression
+  ## use initially K=1 cluster
+  Lbeta = solve(t(chol(Sbeta))) # Leta*S*Leta' = I :-)
+  Sibeta = solve(Sbeta)
+  Simbeta = Sibeta%*%mbeta
+  mdp = list(d=d,M=M,q=q,
+             s=rep(1,M), K=1,a=a,b=b,
+             betas=as.matrix(mbeta,ncol=1),
+             mbeta=mbeta, Sbeta=Sbeta, Sibeta=Sibeta,
+             Lbeta=Lbeta, Simbeta=Simbeta,
+             sigs=sigs)
+  return(mdp)
+}
 
-mdpUpdS_reg = function(mdp, niter=mdp$M, ns=10){
+mdpUpdS_reg = function(mdp, niter=mdp$M, ns=20){
   ## MCMC transition probs to update s (if updateS=T);
   ## niter iterations
   ## 1. evaluate fk=p(y*[k] | s) (marginalizing eta), k=1..K
@@ -963,74 +951,78 @@ mdpUpdS_reg = function(mdp, niter=mdp$M, ns=10){
   ## to evaluate likel of (currently considered) unit i in cluster k we
   ## 1a. for n[k]<ns we use marg likel p(y[i] | y*[k]-)=p(y*[k])/p(y*[k]-)
   ##     here marginalization is w.r.t. betas[k],
-  ##     and y*[k]- = cluster k w/o unit i ("fk")
-  ##         y*[k]  = .. with unit i ("llwith") (only in loop over k)
+  ##     and y*[k]- = cluster k w/o unit i ("llwo")
+  ##         y*[k]  = .. with unit i ("llwith")
   ## 1b. otherwise conditional             p(y[i] | betas[k]) (much faster)
   
   ## 1. evaluate marginal (only for nk[k]<ns)
-  fk = rep(NA, mdp$K)   # current log marg likelihood (*without* ..)
-  nk = rep(0,mdp$K)            # cluster sizes
+  llwith = rep(0,mdp$K)   # log cluster-spec likel *with* (currently considered) unit i
+  llwo   = rep(0,mdp$K)   # .. *without*
+  nk = rep(0,mdp$K)       # cluster sizes
   for(k in 1:mdp$K){ 
     nk[k] = sum(mdp$s==k)
     if (nk[k]<ns)
-      fk[k] = mdpMarg(k,mdp) # initialize fk
+      llwo[k] = mdpMarg_reg(k,mdp) # initialize llwo
+    ## note for k=s[i] llwo[k] is actually ll"with"! Will correct this below (*)
   }
-  
-  ## 2. random scan over s[i], updating fk & nk as needed (but not llwith)
-  iit = sample(1:mdp$M,size=niter,replace=T)  ## randomly chosen unit i to update s[i]
+  llwith[nk >= ns] = NA     ## do *not* evaluate llwith & llwo for n[k]>ns
+  llwo[nk>=ns] = NA
+  ## 2. iteratively update one random s, updating fk as needed
+  iit = sample(1:mdp$M,size=niter,replace=T)
+  ## randomly chosen unit i to update s[i]
   for(it in 1:niter){
     i = iit[it]
-    ## 2.1 take i out of it's current cluster ----------------------
+    ## 2.1 take i out of it's current cluster
     sold = mdp$s[i]        # save current s[i]
     mdp$s[i]= -1           # take it out of current cluster
-    nk[sold]  = nk[sold]-1  # update current cluster size for k=s[i]
+    nki = nk[sold]         # current cluster size for i
+    nk[sold]  = nki-1
     if (nk[sold]==0){      # singleton cluster -- take it out and decrement K
-      mdp = mdpSwap(mdp,sold,mdp$K)
-      fk[sold] = fk[mdp$K]
+      mdp = mdpSwap_reg(mdp,sold,mdp$K)
+      llwith[mdp$K] = llwo[sold] # currently not used - but save it
+      llwo[sold] = llwo[mdp$K]
       nk[sold] = nk[mdp$K]
       nk = nk[-mdp$K]            # drop last element
-      fk = fk[-mdp$K]
       mdp$K = mdp$K-1
     } else {
-      if (nk[sold]<ns)      # update fk w/o i
-        fk[sold] = mdpMarg(sold,mdp) # evaluate (new) fk (w/o i)
+      if (nk[sold]<ns){      # llwo was not evaluated; get it..
+        llwith[sold] = llwo[sold] # currently not used - but save it
+        llwo[sold] = mdpMarg_reg(sold,mdp) # evaluate (new) llwo (w/o i)
+      }
     }
-    ## 2.2 prob's for joining k=1...K ---------------------------------
-    llwith = rep(0,mdp$K)   # log cluster-spec likel *with* (currently considered) unit i
-    lps       = log(nk+mdp$b)   # log *prior* prob for s[i]=k, k=1..K
+    lps = rep(0,mdp$K)     # initialize (log) post prob p(s[i]=k | ...)
+    prnew = mdp$a-mdp$b*mdp$K
+    lps       = log(nk+mdp$b)
+    if (prnew > 0){
+      lps[mdp$K+1] = log(prnew) ## last element for new cluster
+    }
     for (k in 1:mdp$K){
       mdp$s[i]=k              # try new cluster membership..
       if (nk[k]<ns){
-        llwith[k] = mdpMarg(k,mdp) ## llwith is *with* i, fk *w/o*
-        lfyi = llwith[k]-fk[k]
+        llwith[k] = mdpMarg_reg(k,mdp) ## llwith is *with* i, llwo *w/o*
+        lfyi = llwith[k]-llwo[k]
       } else 
-        lfyi = mdpFy(i,k,mdp)
+        lfyi = mdpFy_reg(i,k,mdp)
       lps[k] = lps[k]+lfyi
     }# k
-    ## 2.3 ... for k=K+1              ---------------------------------
-    prnew = mdp$a-mdp$b*mdp$K
     if (prnew>0){ # consider a new cluster..
-      lps = c(lps, log(prnew)) # log *prior* prob for s[i]=K+1
       k=mdp$K+1
       mdp$s[i]= k  # try new cluster membership
-      lfyi = mdpMarg(k,mdp)
-      llwith = c(llwith, lfyi) # incremement by 1, llwith is *with*
-      lps[k] = lps[k]+lfyi
+      llwith = c(llwith, mdpMarg_reg(k,mdp)) # incremement by 1, llwith is *with*
+      lps[k] = lps[k]+llwith[k]
     }
-    ## 2.4 sample s[i]              ---------------------------------
     ps = exp(lps-max(lps))
     k = sample(1:length(ps),size=1,prob=ps)
     mdp$s[i] =k
     if (k==mdp$K+1){
       mdp$K = mdp$K+1
-      out = mdpPBeta(mdp,k,T) # sample betas[k]
+      out = mdpPBeta_reg(mdp,k,T) # sample betas[k]
       mdp$betas = cbind(mdp$betas, out$betask)
       nk = c(nk,1)
-      fk = c(fk, llwith[k])
+      llwo = c(llwo, llwith[k])
     } else {
       nk[k] = nk[k]+1
-      if (nk[k]<ns)
-        fk[k] = llwith[k] ## with the new i becomes the new fk (the next i..)
+      llwo[k] = llwith[k] ## with the new i becomes the new llwo (the next i..)
     }
   } # it
   return(mdp)
@@ -1041,15 +1033,14 @@ mdpUpdB_reg = function(mdp,spl=T){ ###** to be updated *** ###
   ## niter iterations
   mdp$betas = matrix(0,nrow=mdp$q, ncol=mdp$K) # initializing betas of right dim
   for(k in 1:mdp$K){
-    out = mdpPBeta(mdp,k,spl=spl)
+    out = mdpPBeta_reg(mdp,k,spl=spl)
     mdp$betas[,k] = out$betask
   }# k
   return(mdp)
 }
 
 mdpPBeta_reg = function(mdp,k,spl=F){
-  ## assumes yXi (when calling with mdp$d=2) or yEta (mdp$d=1) are correctly built
-  ## using the global yXi & yEta to avoid using huge matrices as arguments..
+  ## assumes yt is correctly built
   Ck = which(mdp$s==k)
   nk = length(Ck)
   betask = NULL # default for return value betas[k] under spl=F
@@ -1057,51 +1048,48 @@ mdpPBeta_reg = function(mdp,k,spl=F){
     sumy=0
     n=0
     for (r in Ck){    ## add up sumy over all pats (=rows in y and X) in cluster Ck
-      idx = !is.na(yEta[r,])
+      idx = !is.na(yt[r,])
       if (any(idx)){ ## any observed data for this patient
         ## note: since we drop patients & prot with all NAs there should always be..
         n = n+sum(idx)
-        sumy = sumy + sum(yEta[r,idx])
+        sumy = sumy + sum(yt[r,idx])
       }
     }
     Vi = (n/mdp$sigs+1/mdp$Sbeta)
     V=1/Vi; K=sqrt(V)
     m = V*(sumy/mdp$sigs+mdp$mbeta/mdp$Sbeta)
-    z = rnorm(1,m=0,sd=1)
     if (spl)
-      betask = m+sqrt(V)*z
+      betask = rnorm(1,m=m,sd=sqrt(V))
     else
       betask = m
-  } else { # d=2; for protein cluster Ck
+  } else { # for protein cluster Ck
     ## build the posterior moment sequentially adding prot's
     Vi = matrix(0,nrow=mdp$q, ncol=mdp$q) # initialize
     Vim = rep(0,mdp$q)
     for (cl in Ck){     ## add terms for each protein in cluster Ck
-      idx = !is.na(yXi[,cl])  # which are observed
+      idx = !is.na(yt[,cl])  # which are observed
       if (any(idx)){  ## any observed data for this protein?
         ## note: since we drop patients & prot with all NAs there should always be..
         Vi = Vi + t(X[idx,]) %*% X[idx,]/mdp$sigs
-        Vim = Vim + 1/mdp$sigs*t(X[idx,])%*%yXi[idx,cl]
+        Vim = Vim + 1/mdp$sigs*t(X[idx,])%*%yt[idx,cl]
       }
     }
     ## debugging ##
     ## V = solve(Vi);        m = V %*% Vim
-    ## cat("V*Vim=",m[1:6],"\n yXi[1:3,Ck]="); print(yXi[1:3,Ck[1:min(10,nk)]])
+    ## cat("V*Vim=",m[1:6],"\n yt[1:3,Ck]="); print(yt[1:3,Ck[1:min(10,nk)]])
     ## now add the prior shrinkage..
     Vi = Vi + mdp$Sibeta
     Vim = Vim + mdp$Simbeta   ## Vim "V-inv*m"
     V = solve(Vi)
     K = t(chol(V))
     m = V %*% Vim
-    z = rnorm(mdp$q)
     if (spl)
-      betask = m+K %*% z
+      betask = m+K %*% rnorm(mdp$q)
     else
       betask = m
   }
-  return(list(m=m,V=V,K=K,z=z,betask=betask))
+  return(list(m=m,V=V,K=K,betask=betask))
 }
-
 
 mdpBetaHat_reg = function(Ck,Vi=NULL, Vim=NULL)
 { # returns mle for a common beta for proteins in Ck, using *raw data* y
@@ -1133,7 +1121,7 @@ mdpMarg_reg = function(k,mdp)
   ## d=1 for patients; d=2 for proteins; d=0 for data records
   ##
   ## 1. posterior p(betas[k] | yk,Xk)=N(m,V), in prep for #2 below..
-  out = mdpPBeta(mdp,k) ## p(betas[k] | dta)
+  out = mdpPBeta_reg(mdp,k) ## p(betas[k] | dta)
   m = out$m
   V = out$V
   K = out$K
@@ -1143,25 +1131,20 @@ mdpMarg_reg = function(k,mdp)
     ## 2. use candidate formula to evaluate marginal
     lfk = 0
     for(r in Ck){ ## add up log likelihood over all patients in Ck
-      idx = !is.na(yEta[r,])
+      idx = !is.na(yt[r,])
       if (any(idx))
-        lfk = lfk + sum( dnorm(yEta[r,idx], m=m, sd=sd, log=T) )
+        lfk = lfk + sum( dnorm(yt[r,idx], m=m, sd=sd, log=T) )
     } # for r
-    lfk = lfk + dnorm(m, m=mdp$mbeta, sd=sqrt(mdp$Sbeta),log=T)+
-      0.5*log(2*pi)+ log(K)  ## likelihoood*prior/posterior
-    ## (prior becomes part of proportionality const :-)
+    lfk = lfk - 0.5*log(2*pi) - log(K)
   } else { # proteins, d=2
     lfk = 0
     mk = X %*% m   ## mean over all patients for proteins in Ck
     for(cl in Ck){ ## add up log likelihood over all prots in Ck
-      idx = !is.na(yXi[,cl]) # patients with data on prot cl
+      idx = !is.na(yt[,cl]) # patients with data on prot cl
       ## 2. use candidate formula to evaluate marginal
-      lfk = lfk + sum( dnorm(yXi[idx,cl], m=mk[idx], sd=sd,log=T) )
+      lfk = lfk + sum( dnorm(yt[idx,cl], m=mk[idx], sd=sd,log=T) )
     }
-    z = mdp$Lbeta %*% (m-mdp$mbeta)
-    lfk = lfk + sum(dnorm(z,m=0,sd=1,log=T)) + sum(log(diag(mdp$Lbeta)))+
-      sum(log(diag(K))) 
-    ## (2pi)^{q/2} cancel out from prior/post
+    lfk = lfk - sum(log(diag(K))) - mdp$q/2*log(2*pi)
   }
   return(lfk)
 }
@@ -1171,37 +1154,35 @@ mdpFy_reg = function(i,k,mdp)
   ## likelih for y[i] | s==k
   sd = sqrt(mdp$sigs)
   if (is.na(mdp$betas[k][1])){ ## not updated - note, betas[k][1] is indep of q
-    out = mdpPBeta(mdp,k,spl=T)
+    out = mdpPBeta_reg(mdp,k,spl=T)
     mdp$betas[,k] = out$betask
   }
   lfk = 0        # default if no data for this patient or protein..
   if (mdp$d==1){ # likelihood for patient i in cluster k
-    idx = !is.na(yEta[i,])
+    idx = !is.na(yt[i,])
     if (any(idx))
-      lfk = sum( dnorm(yEta[i,idx], m=mdp$betas[,k], sd=sd, log=T) )
+      lfk = sum( dnorm(yt[i,idx], m=mdp$betas[,k], sd=sd, log=T) )
   } else { # for protein i in cluster k, d=2
     mk = X %*% mdp$betas[,k]   ## mean over all patients for any protein in cluster k
-    idx = !is.na(yXi[,i]) # patients with data on prot i
+    idx = !is.na(yt[,i]) # patients with data on prot i
     if (any(idx))
-      lfk =sum( dnorm(yXi[idx,i], m=mk[idx], sd=sd,log=T) )
+      lfk =sum( dnorm(yt[idx,i], m=mk[idx], sd=sd,log=T) )
   }
   return(lfk)
 }
 
 updateSigs_reg = function(mdp){
-  ## update mdp$sig2, residual var -- same for eta and xi
-  ## assume yEtaXi is already just residuals, corrected for
+  ## update mdp$sig2, residual var
+  ## assume yt is already just residuals, corrected for
   ##     protein *and* patient effects (done with mdpOffset(.) before)
-  S = sum(yEtaXi*yEtaXi, na.rm=T)
-  N = sum(!is.na(yEtaXi))
+  S = sum(yt*yt, na.rm=T)
+  N = sum(!is.na(yt))
   a = (prior$asig+N)/2
   b = (prior$bsig+S)/2
   w = rgamma(1,a,rate=b)
   sigs = 1/w
   ## save for debugging & summaries
   SSM <<- S/N
-  oldlogl <<- logl
-  logl <<- -0.5*S/mdp$sigs -0.5*N*log(mdp$sigs) ## log likelihood
   
   return(sigs)
 }
@@ -1210,30 +1191,30 @@ updateSigs_reg = function(mdp){
 ## plots and debugging
 
 pltInit_reg = function()
-{ ## in preparation for plt(), read in all simulation summaries
-  mcmc <<-  read.csv("chain.txt",header=T)
-  Ey <<-  as.matrix( read.csv("Ey.txt", header=F) )
-  np=ncol(Ey)
-  my <<-  matrix(apply(Ey,1,mean),ncol=2) ## avg expression by condition (not used..)
+{ ## in preparation for plt_reg(), read in all simulation summaries
+  mcmc <<-  read.csv("Data-and-Results/chain.txt",header=T)
+  Ey <<-  as.matrix( read.csv("Data-and-Results/Ey.txt", header=F) )
+  np = ncol(Ey)
+  my <<-  matrix(apply(Ey,1,mean), ncol=2) ## avg expression by condition (not used..)
   My = apply(my,1,mean)                   ## overall avg profile (never used..)
   Ey <<-  array(Ey,dim=c(16,2,np))    ## for easier access below
   ## dimensions are: age, case, protein
   
-  Ey2 <<-  as.matrix( read.csv("Ey2.txt", header=F) ) 
+  Ey2 <<-  as.matrix( read.csv("Data-and-Results/Ey2.txt", header=F) ) 
   my2 <<-  matrix(apply(Ey2,1,mean),ncol=2)
   Ey2 <<-  array(Ey2,dim=c(16,2,np))
   
-  Eyp <<-  as.matrix(read.csv("Eyp.txt", header=F) ) 
+  Eyp <<-  as.matrix(read.csv("Data-and-Results/Eyp.txt", header=F) ) 
   mp <<-  matrix(apply(Eyp,1,mean),ncol=2) ## avg by condition
   Eyp <<-  array(Eyp,dim=c(16,2,np))       # Eyp as 3-d array
   mp3  <- array(mp,dim=c(16,2,np))         ## avg by condition repeated as needed..
   Eyp0 <<- Eyp-mp3        ## Eyp corrected by avg per patient (non likelihood identifiable..)
   
-  Eyp2 <<- as.matrix(read.csv("Eyp2.txt", header=F) ) 
+  Eyp2 <<- as.matrix(read.csv("Data-and-Results/Eyp2.txt", header=F) ) 
   mp2 <<-  matrix(apply(Eyp2,1,mean),ncol=2)
   Eyp2 <<-  array(Eyp2,dim=c(16,2,np))
   
-  yy <<-  array(y,dim=c(16,2,np))   # in same 3-d array for easier plotting blow..
+  yy <<-  array(y,dim=c(16,2,np))   # in same 3-d array for easier plotting
 }
 
 plt_reg = function(fit=T, dta=F, prot=F, idx=NULL, lw=0.5, pltm=F, case=F,ctr=T, dtatype="p")
@@ -1277,9 +1258,6 @@ plt_reg = function(fit=T, dta=F, prot=F, idx=NULL, lw=0.5, pltm=F, case=F,ctr=T,
     matplot(ages, mp ,type=pltmch,bty="l",col=1:2,lwd=3,ylim=range(Eyp,na.rm=T))
     if (ctr) matlines(ages[,1], Eyp0[,1,idx], col="grey", lwd=1, lty=1, type="l")
     if (case) matlines(ages[,2], Eyp0[,2,idx], col="pink", lwd=1, lty=2, type="l")
-    lx=max(ages); ly=4
-    legend(lx,ly,bty="n",xjust=1,yjust=1,col=c("grey","pink"),
-           legend=c("CTR","CASE"), lty=1:2, lwd=3)
   } # prot
 }
 
@@ -1291,16 +1269,21 @@ maxDiff_reg = function()
   ## same with raw dta
   dfy = abs( (yy[Tm,1,]-yy[1,1,])-(yy[Tm,2,]-yy[1,2,]))
   oy=order(-dfy)
+  # 
+  np = ncol(Ey)
+  #
   ## with protein-specific regression
-  sigs = mean(mcmc[,4])  # posterior mean for sig2
-  yhat = 0*y             # initilaize
+  sigs = mean(mcmc[,3])  # posterior mean for sig2
+  yhat = matrix(0,nrow=32, ncol=np) # initialize
   Vi = t(X)%*% X         # same for all proteins
   V = solve(Vi)
-  for (j in 1:C){
-    out = lsfit(X,y[,j],intercept=F) # fit the raw data for protein j
-    yhat[,j] = y[,j]-out$residuals
+  beta = rep(0,p)
+  for (j in 1:np){
+    Vim = t(X)%*%yt[,j]
+    beta = V %*% Vim
+    yhat[,j] = X %*% beta
   }
-  yyhat = array(yhat,dim=c(16,2,C))   # in same 3-d array for easier plotting blow..
+  yyhat = array(yhat,dim=c(16,2,np))   # in same 3-d array for easier plotting
   dfyhat = abs( (yyhat[Tm,1,]-yyhat[1,1,])-(yyhat[Tm,2,]-yyhat[1,2,]))
   oyhat=order(-dfyhat)
   
@@ -1310,33 +1293,6 @@ maxDiff_reg = function()
   cat("Proteins with largest empirical effect (L2):\n  ", nm[oy[1:10]],"\n")
   cat("Proteins with largest mle effect (L2):\n  ", nm[oyhat[1:10]],"\n")
   return(of)
-}
-
-pltLogl_reg = function()
-{ # plots trajectory of log likelihood
-  ll = mcmc[,3]  ## make sure logl is saved in 3rd column! Just check col labels
-  it = mcmc[,1]
-  q = quantile(ll, probs=c(0.01,0.999))
-  plot(it, ll, type="l", xlab="ITERATION", ylab="LOG LIK", bty="l",ylim=q)
-}
-
-pltK_reg = function(d=1,traj=F)
-{ # plot # clusters, d=1 for patients, d=2 for prot
-  nm = colnames(mcmc)
-  j1 = which(nm=="K.pat")
-  j2 = which(nm=="K.prot")
-  it = mcmc[,1]
-  if (traj){
-    if (d==1)
-      plot(it[-(1:20)], mcmc[-(1:20),j1],xlab="ITERATION",bty="l",type="l")
-    else 
-      plot(it[-(1:20)], mcmc[-(1:20),j2],xlab="ITERATION",bty="l",type="l")
-  }  else {        
-    if (d==1)
-      hist(mcmc[-(1:20),j1],breaks=(14:19)+.5,xlab="K PATIENTS",bty="l",prob=T,main="K PATIENTS")
-    else 
-      hist(mcmc[-(1:20),j2],xlab="K PROTEINS",bty="l",prob=T)
-  }
 }
 
 ### plot ggplot reg
