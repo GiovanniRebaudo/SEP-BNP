@@ -752,36 +752,36 @@ main_reg = function(niter=100){
   ## before updating eta, xi or sigs make sure to update yXi, yEta & yEtaXi
   
   sigs = 1/ (prior$asig/prior$bsig) ## prior mean for residual var
-  mdpEta = mdpInit(2,C,q=p, mbeta=prior$meta, Sbeta=prior$Seta,
+  mdpEta = mdpInit_reg(2,C,q=p, mbeta=prior$meta, Sbeta=prior$Seta,
                    a=prior$aeta, b=prior$beta, sigs=sigs)      # protein effects eta[j]
   ### initializes with K=1 single cluster
-  mdpXi =  mdpInit(1,R,q=1, mbeta=prior$mxi, Sbeta=prior$Sxi,  
+  mdpXi =  mdpInit_reg(1,R,q=1, mbeta=prior$mxi, Sbeta=prior$Sxi,  
                    a=prior$axi, b=prior$bxi, sigs=sigs)        # pat effects xi[i]
   ### initializes with K=1 single cluster
   ## next initialize patient partitions using all singleton clusters:
-  mdpOffset(mdpEta)
-  mdpXi  = mdpInitClust(mdpXi, R) # all singleton clusters
+  mdpOffset_reg(mdpEta)
+  mdpXi  = mdpInitClust_reg(mdpXi, R) # all singleton clusters
   ## next initialize protein partitions using hclust;
-  ## in mdpInit they were initialized with K=1 cluster
-  mdpOffset(mdpXi)
+  ## in mdpInit_reg they were initialized with K=1 cluster
+  mdpOffset_reg(mdpXi)
   Kmax = if(mdpEta$b>0) round( mdpEta$a/mdpEta$b ) else 20
-  mdpEta = mdpInitClust(mdpEta, Kmax)
+  mdpEta = mdpInitClust_reg(mdpEta, Kmax)
   
-  mcmcInit()
-  mdpOffset(mdpXi) # updates global yXi = y - pat effects (not really needed..)
+  mcmcInit_reg()
+  mdpOffset_reg(mdpXi) # updates global yXi = y - pat effects (not really needed..)
   for(it in 1:niter){
-    mdpEta = mdpUpdate(mdpEta,niter=500)
-    mdpOffset(mdpEta)         # updates global yEta and yEtaXi
+    mdpEta = mdpUpdate_reg(mdpEta,niter=500)
+    mdpOffset_reg(mdpEta)         # updates global yEta and yEtaXi
     ## debugging ----------------------------
-    ## updateSigs(mdpXi)         # just to evaluate logl & old logl
-    ## debugLogl(it,"upd(eta)")  # debugging.. 
-    mdpXi = mdpUpdate(mdpXi)
-    mdpOffset(mdpXi)          # update yXi and yEtaXi
-    mdpXi$sigs  = updateSigs(mdpXi)
+    ## updateSigs_reg(mdpXi)         # just to evaluate logl & old logl
+    ## debugLogl_reg(it,"upd(eta)")  # debugging.. 
+    mdpXi = mdpUpdate_reg(mdpXi)
+    mdpOffset_reg(mdpXi)          # update yXi and yEtaXi
+    mdpXi$sigs  = updateSigs_reg(mdpXi)
     mdpEta$sigs = mdpXi$sigs  # need residual var in both
-    debugLogl(it,"upd(xi )")  # debugging.. 
+    debugLogl_reg(it,"upd(xi )")  # debugging.. 
     if (it %% 10==0)
-      mcmcUpd(mdpEta,mdpXi,it)
+      mcmcUpd_reg(mdpEta,mdpXi,it)
   }# it
 }
 
@@ -794,9 +794,9 @@ debugLogl_reg = function(it,msg){
 }
 
 prtLogl_reg = function(){ # debugging only -- make sure mdpEta & mdpXi are global
-  mdpOffset(mdpEta)  # updates global yt = y - prot effects
-  mdpOffset(mdpXi,incr=T)  # yt = y - (pat effects + prot effects)
-  updateSigs(mdpXi)
+  mdpOffset_reg(mdpEta)  # updates global yt = y - prot effects
+  mdpOffset_reg(mdpXi,incr=T)  # yt = y - (pat effects + prot effects)
+  updateSigs_reg(mdpXi)
   cat("logl = ", format(logl), "(", format(oldlogl),").\n")
   return(logl)
 }
@@ -808,7 +808,7 @@ mcmcInit_reg = function(){
   Eyp <<- Ey
   Eyp2 <<- Ey
   nEy <<- 0        # number of updates (Ey and Ey2 are running sums -- divide by nEy for plotting)
-  SSM <<- 0        # mean residual SS (updated in updateSigs)
+  SSM <<- 0        # mean residual SS (updated in updateSigs_reg)
   chain <<- NULL # collect summaries at each iteration
   ## it, SSM, sig2, K-pat, K-prot, nk-pat*, nk-prot* (nk*: 5 largest cluster sizes, padded with 0's if needed)
   filesAppend <<- F # init the files at first write
@@ -825,7 +825,7 @@ mcmcUpd_reg = function(mdpEta, mdpXi,it){
   cat("\t K-Pat= ",mdpXi$K," (",table(mdpXi$s),") avg(betas)=",
       format(mean(mdpXi$betas),digits=2),"\t")
   cat("sig=", format(sqrt(mdpXi$sigs)),"   SSM=", format(SSM), " logl=", format(logl),"\n")
-  ## note: SSM is updated in updateSigs (as global var -- dirty programming :-(
+  ## note: SSM is updated in updateSigs_reg (as global var -- dirty programming :-(
   
   ## summaries
   nkProt = sort( table(mdpEta$s), dec=T)[1:5]
@@ -839,8 +839,8 @@ mcmcUpd_reg = function(mdpEta, mdpXi,it){
   ## it, SSM, sig2, K-pat, K-prot, nk-pat*, nk-prot* (nk*: 5 largest cluster sizes, padded with 0's if needed)
   
   ## updated fitted summaries
-  yhat = mdpFitted(mdpEta, mdpXi)
-  yphat = mdpFitted(mdpEta, fitProt=T)
+  yhat = mdpFitted_reg(mdpEta, mdpXi)
+  yphat = mdpFitted_reg(mdpEta, fitProt=T)
   Ey <<- Ey+yhat
   Ey2 <<- Ey2+yhat*yhat
   Eyp <<- Eyp+yphat
@@ -942,13 +942,13 @@ mdpInitClust_reg = function(mdp,K0){
     mdp$s = cutree(hc,k=K0)
     mdp$K = length(unique(mdp$s))
   }
-  mdp = mdpUpdB(mdp,spl=F)
+  mdp = mdpUpdB_reg(mdp,spl=F)
   return(mdp)
 }
 
 mdpUpdate_reg = function(mdp, niter=mdp$M){
-  mdp = mdpUpdS(mdp,niter)
-  mdp = mdpUpdB(mdp)
+  mdp = mdpUpdS_reg(mdp,niter)
+  mdp = mdpUpdB_reg(mdp)
   return(mdp)
 }
 
@@ -973,7 +973,7 @@ mdpUpdS_reg = function(mdp, niter=mdp$M, ns=10){
   for(k in 1:mdp$K){ 
     nk[k] = sum(mdp$s==k)
     if (nk[k]<ns)
-      fk[k] = mdpMarg(k,mdp) # initialize fk
+      fk[k] = mdpMarg_reg(k,mdp) # initialize fk
   }
   
   ## 2. random scan over s[i], updating fk & nk as needed (but not llwith)
@@ -985,7 +985,7 @@ mdpUpdS_reg = function(mdp, niter=mdp$M, ns=10){
     mdp$s[i]= -1           # take it out of current cluster
     nk[sold]  = nk[sold]-1  # update current cluster size for k=s[i]
     if (nk[sold]==0){      # singleton cluster -- take it out and decrement K
-      mdp = mdpSwap(mdp,sold,mdp$K)
+      mdp = mdpSwap_reg(mdp,sold,mdp$K)
       fk[sold] = fk[mdp$K]
       nk[sold] = nk[mdp$K]
       nk = nk[-mdp$K]            # drop last element
@@ -993,7 +993,7 @@ mdpUpdS_reg = function(mdp, niter=mdp$M, ns=10){
       mdp$K = mdp$K-1
     } else {
       if (nk[sold]<ns)      # update fk w/o i
-        fk[sold] = mdpMarg(sold,mdp) # evaluate (new) fk (w/o i)
+        fk[sold] = mdpMarg_reg(sold,mdp) # evaluate (new) fk (w/o i)
     }
     ## 2.2 prob's for joining k=1...K ---------------------------------
     llwith = rep(0,mdp$K)   # log cluster-spec likel *with* (currently considered) unit i
@@ -1001,10 +1001,10 @@ mdpUpdS_reg = function(mdp, niter=mdp$M, ns=10){
     for (k in 1:mdp$K){
       mdp$s[i]=k              # try new cluster membership..
       if (nk[k]<ns){
-        llwith[k] = mdpMarg(k,mdp) ## llwith is *with* i, fk *w/o*
+        llwith[k] = mdpMarg_reg(k,mdp) ## llwith is *with* i, fk *w/o*
         lfyi = llwith[k]-fk[k]
       } else 
-        lfyi = mdpFy(i,k,mdp)
+        lfyi = mdpFy_reg(i,k,mdp)
       lps[k] = lps[k]+lfyi
     }# k
     ## 2.3 ... for k=K+1              ---------------------------------
@@ -1013,7 +1013,7 @@ mdpUpdS_reg = function(mdp, niter=mdp$M, ns=10){
       lps = c(lps, log(prnew)) # log *prior* prob for s[i]=K+1
       k=mdp$K+1
       mdp$s[i]= k  # try new cluster membership
-      lfyi = mdpMarg(k,mdp)
+      lfyi = mdpMarg_reg(k,mdp)
       llwith = c(llwith, lfyi) # incremement by 1, llwith is *with*
       lps[k] = lps[k]+lfyi
     }
@@ -1023,7 +1023,7 @@ mdpUpdS_reg = function(mdp, niter=mdp$M, ns=10){
     mdp$s[i] =k
     if (k==mdp$K+1){
       mdp$K = mdp$K+1
-      out = mdpPBeta(mdp,k,T) # sample betas[k]
+      out = mdpPBeta_reg(mdp,k,T) # sample betas[k]
       mdp$betas = cbind(mdp$betas, out$betask)
       nk = c(nk,1)
       fk = c(fk, llwith[k])
@@ -1041,7 +1041,7 @@ mdpUpdB_reg = function(mdp,spl=T){ ###** to be updated *** ###
   ## niter iterations
   mdp$betas = matrix(0,nrow=mdp$q, ncol=mdp$K) # initializing betas of right dim
   for(k in 1:mdp$K){
-    out = mdpPBeta(mdp,k,spl=spl)
+    out = mdpPBeta_reg(mdp,k,spl=spl)
     mdp$betas[,k] = out$betask
   }# k
   return(mdp)
@@ -1133,7 +1133,7 @@ mdpMarg_reg = function(k,mdp)
   ## d=1 for patients; d=2 for proteins; d=0 for data records
   ##
   ## 1. posterior p(betas[k] | yk,Xk)=N(m,V), in prep for #2 below..
-  out = mdpPBeta(mdp,k) ## p(betas[k] | dta)
+  out = mdpPBeta_reg(mdp,k) ## p(betas[k] | dta)
   m = out$m
   V = out$V
   K = out$K
@@ -1171,7 +1171,7 @@ mdpFy_reg = function(i,k,mdp)
   ## likelih for y[i] | s==k
   sd = sqrt(mdp$sigs)
   if (is.na(mdp$betas[k][1])){ ## not updated - note, betas[k][1] is indep of q
-    out = mdpPBeta(mdp,k,spl=T)
+    out = mdpPBeta_reg(mdp,k,spl=T)
     mdp$betas[,k] = out$betask
   }
   lfk = 0        # default if no data for this patient or protein..
@@ -1191,7 +1191,7 @@ mdpFy_reg = function(i,k,mdp)
 updateSigs_reg = function(mdp){
   ## update mdp$sig2, residual var -- same for eta and xi
   ## assume yEtaXi is already just residuals, corrected for
-  ##     protein *and* patient effects (done with mdpOffset(.) before)
+  ##     protein *and* patient effects (done with mdpOffset_reg(.) before)
   S = sum(yEtaXi*yEtaXi, na.rm=T)
   N = sum(!is.na(yEtaXi))
   a = (prior$asig+N)/2

@@ -92,7 +92,7 @@ set.seed(135)
 source("SEP_fcts.R")
 
 ## global variables for the dta
-out = readDta_reg("Data-and-Results/") ## make global vars for the data
+out = readDta_reg("Data-and-Results/data_protein.RData") ## make global vars for the data
 X = out$X
 y = out$y
 ## data corrected for patient and/or prot effects (used in MCMC)
@@ -172,7 +172,7 @@ if (FALSE){
 # Plots in the paper
 
 pltInit_reg()
-load("Data-and-Results/yt.RData")
+# load("Data-and-Results/yt.RData")
 of = maxDiff_reg()
 
 P1 = plt_reg_ggplot(T,T,F,1,case=T,ctr=T)
