@@ -859,6 +859,7 @@ mcmcUpd_reg = function(mdpEta, mdpXi,it){
     write.table(format(Eyp/nEy),"Eyp.txt",quote=F,col.names=F,row.names=F,sep=",")
     write.table(format(Eyp2/nEy),"Eyp2.txt",quote=F,col.names=F,row.names=F,sep=",")
   }
+  # save(yt,file="Data-and-Results/yt.RData")
   return(0)
 }
 

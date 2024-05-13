@@ -163,9 +163,9 @@ prior = list(
 ## nupd
 
 # Run MCMC
-if (FALSE){
+if (T){
   startTime = Sys.time()
-  main_reg(20000)
+  main_reg(200)
   timeREG = difftime(Sys.time(), startTime, units=("secs"))[[1]]
 }
 
@@ -190,10 +190,9 @@ P  = P +
   draw_label("Y",    x=  0, y=0.55, vjust= 1.5, angle=90)
 P
 
-#ggsave(plot=P, file ="Image/Ind_prot.pdf", 
-#       width=20, height=8, units = 'cm')
+#ggsave(plot=P, file ="Image/Ind_prot.pdf", width=20, height=8, units = 'cm')
 
-######### Normal- QQtest #####################
+##############################
 chain = mcmc[,-1]
 colnames(chain) = c("it", "SSM", "sig2", "K-prot", "K-pat", paste("nk",1:5,sep=""), paste("nk",1:5,sep=""))
 
@@ -209,15 +208,6 @@ plt_reg(F,T,F,of[1:20],case=T,ctr=T,dtatype="l")
 plt_reg_ggplot(F,T,F,of[1:20],case=T,ctr=T,dtatype="l")
 
 summary(chain$`sig2`)
-
-
-df <- data.frame(y = as.vector(yt)/mean(sqrt(chain$`sig2`)))
-P <- ggplot( df, aes(sample = y))
-P <- P + stat_qq() + stat_qq_line()
-
-P
-
-ggsave(plot=P, file ="Image/qq_prot.pdf", width=12, height=12, units = 'cm')
 
 sProt <- read.csv("./Data-and-Results/sProt.txt", header=FALSE)
 # Leggi senza virgole
@@ -277,4 +267,15 @@ heatmap(dissimlar_ord_pat, Rowv = NA, Colv = NA, scale='none',
 invisible(dev.off())
 
 
+# Plot log likelihood
+ll_out = mcmc[,3]  
+it = mcmc[,1]
+data_ll = data.frame(cbind(it, ll_out))
+P = ggplot(data=data_ll, aes(x=it, y=ll_out)) +
+  geom_line()+xlab("iter")+ylab("log lik")
 
+# ggsave(plot=P, file="Image/ll_reg.pdf", height = 3, width = 6)    
+
+# pltK_reg(1)
+
+# pltK_reg(1,T)

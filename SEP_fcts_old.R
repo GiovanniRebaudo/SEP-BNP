@@ -846,7 +846,7 @@ mcmcUpd_reg = function(mdpEta, mdpXi,it){
                 quote=F, col.names=F, row.names=F, sep=",")
     print(it)
   }
-  save(yt,file="Data-and-Results/yt.RData")
+  # save(yt,file="Data-and-Results/yt.RData")
   return(0)
 }
 
