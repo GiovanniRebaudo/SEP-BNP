@@ -165,10 +165,11 @@ prior = list(
 # Run MCMC
 if (T){
   startTime = Sys.time()
-  main_reg(200)
+  main_reg(10000)
   timeREG = difftime(Sys.time(), startTime, units=("secs"))[[1]]
 }
 
+# timeREG
 # Plots in the paper
 
 pltInit_reg()
@@ -201,7 +202,7 @@ colnames(chain) = c("it", "SSM", "sig2", "K-prot", "K-pat", paste("nk",1:5,sep="
 
 # Check
 table(chain$`K-pat`)
-table(chain$`K-prot`)
+# table(chain$`K-prot`)
 
 
 plt_reg(F,T,F,of[1:20],case=T,ctr=T,dtatype="l")
@@ -270,9 +271,14 @@ invisible(dev.off())
 # Plot log likelihood
 ll_out = mcmc[,3]  
 it = mcmc[,1]
+ll_out = mcmc[-(1:200),3]  
+it = mcmc[-(1:200),1]
+it = 1:length(mcmc[-(1:200),1])
 data_ll = data.frame(cbind(it, ll_out))
 P = ggplot(data=data_ll, aes(x=it, y=ll_out)) +
   geom_line()+xlab("iter")+ylab("log lik")
+
+
 
 # ggsave(plot=P, file="Image/ll_reg.pdf", height = 3, width = 6)    
 
