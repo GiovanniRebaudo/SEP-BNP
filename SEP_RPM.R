@@ -241,12 +241,14 @@ dim(LL)
 LL2 <- reshape2::melt(LL)
 LL2 <- cbind(LL2,cluster_per_obs)
 LL2 <- as_tibble(LL2) %>% mutate(cluster_per_obs=paste0("",cluster_per_obs))
+# Delete oulier
+LL2 <- LL2[LL2$cluster_per_obs!=3,]
 P = ggplot(LL2)+
   geom_hline(yintercept = c(0,1),lty=3)+
   geom_line(aes(x=Var1,y=value,group=Var2,col=as.factor(cluster_per_obs)),
             lwd=.5, alpha=.2)+
   geom_point(aes(x=Var1,y=value,group=Var2,col=as.factor(cluster_per_obs)),
-             alpha=.9)+
+             alpha=.5, size=0.5)+
   theme_bw()+scale_color_manual("Subject\nCluster",
                                 values = c(2,4,1,6,5)) + ylim(0, 1)+
   xlab("Taxa sorted by count")+ylab("Cumulative Relative Frequncy")
@@ -314,8 +316,8 @@ Plot_heat <- function(dissimlar_stable = dissimlar_stable,
     scale_y_discrete(limits=floor(seq(I, 1)),
                      breaks = floor(seq(1, I, length.out = 9)), 
                      labels = floor(seq(1, I, length.out = 9))) +
-    scale_x_discrete(breaks = floor(seq(1, I, length.out = 9)), 
-                     labels = floor(seq(1, I, length.out = 9))) +
+    scale_x_discrete(breaks = floor(seq(1, I-10, length.out = 9)), 
+                     labels = floor(seq(1, I-10, length.out = 9))) +
     xlab("OTU") + ylab("OTU") +
     scale_fill_gradientn(colours = c("white", "yellow", "red"), 
                          values = rescale(c(0, 0.5, 1)), 
@@ -323,17 +325,16 @@ Plot_heat <- function(dissimlar_stable = dissimlar_stable,
     theme(legend.position = "right", text = element_text(size=20))
 }
 
-P1 = Plot_heat(PSM1, B) + xlab("") + theme(legend.position="none")
-P2 = Plot_heat(PSM2, B) + ylab("") + theme(legend.position="none")
-P3 = Plot_heat(PSM3, B) + xlab("") + ylab("")
+P1 = Plot_heat(PSM1, B) + theme(legend.position="none")
+P2 = Plot_heat(PSM2, B) + ylab("") #+ theme(legend.position="none")
+# P3 = Plot_heat(PSM3, B) + xlab("") + ylab("")
 
 
 
-PHeat <- ggarrange(P1, P2, P3, labels = c("1", "2", "3"), nrow=1,
-                   widths = c(1, 1, 1.2))
+PHeat <- ggarrange(P1, P2, nrow=1, widths = c(1, 1.2))
 
-# ggsave(plot=PHeat, file="Image/mik_coclusterprob_sorted2.pdf", 
-       # width=15, height=4.5)
+ggsave(plot=PHeat, file="Image/mik_coclusterprob_sorted2.pdf",
+width=10, height=4.5)
 
 Point_Mki1 = salso::salso(t(mki[1,,]), nRuns = 100, 
                           maxZealousAttempts = 100, loss=VI())
@@ -358,7 +359,8 @@ P = ggplot(Zmelts,aes(Var2,Var1,fill=value)) +
   facet_wrap(.~point_SJ, scales = "free")+
   scale_fill_viridis_c() +
   theme(axis.text.x = element_blank(),
-    axis.text.y = element_blank()) +
+    axis.text.y = element_blank(),
+    text = element_text(size=20)) +
   labs(y= "OTU", x = "Subject") 
 
 # ggsave(plot=P, file="Image/mb-heatmap-y2.pdf", height = 5, width = 6)    
