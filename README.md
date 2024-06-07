@@ -1,6 +1,6 @@
 # SEP-BNP
 
-R codes for separately exchangeable Bayesian non-parametric model.
+R codes for separately exchangeable Bayesian nonparametric model.
 
 **Authors**: [Giovanni Rebaudo](https://giovannirebaudo.github.io), [Qiaohui Lin](https://qiaohuilin.github.io) and [Peter Müller](https://web.ma.utexas.edu/users/pmueller).
 
