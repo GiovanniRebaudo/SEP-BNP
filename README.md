@@ -27,4 +27,4 @@ The repository contains the following:
 5. `Data-and-Results` folder with data and some results of the analyses.
 
 #### Citation
-Please cite the following publication if you use this repository in your research: [Rebaudo, G., Lin Q. and Müller, P. (2024). Separate exchangeability as modeling principle in Bayesian nonparametrics.]
+Please cite the following publication if you use this repository in your research: [Rebaudo, G., Lin Q. and Müller, P. (2024). Separate exchangeability as modeling principle in Bayesian nonparametrics.]()
