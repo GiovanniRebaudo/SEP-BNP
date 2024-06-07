@@ -23,7 +23,7 @@ The repository contains the following:
 1. `SEP_RPM.R` code to reproduce the main results in the article obtained with the separately exchangeable random partition model;
 2. `SEP_Reg.R` code to reproduce the main results in the article obtained with the separately exchangeable regression BNP model;
 3. `SEP_fcts.R` functions needed to run the main code;
-4. `SEP_Splines.R` code to reproduce the spline plot;
+4. `SEP_Splines.R` code to reproduce the splines basis plots;
 5. `Data-and-Results` folder with data and some results of the analyses.
 
 #### Citation
