@@ -1,7 +1,8 @@
 # Codes accompanying "Separate Exchangeability as 
 # Modeling Principle in Bayesian Nonparametrics"
 
-# Load relevant libraries, functions and data ----------------------------------
+# Load rel
+evant libraries, functions and data ----------------------------------
 rm(list=ls())
 # Set the working directory to the current folder 
 # Code to set the working directory to the current folder from RStudio

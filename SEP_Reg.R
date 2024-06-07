@@ -163,7 +163,7 @@ prior = list(
 ## nupd
 
 # Run MCMC
-if (T){
+if (F){
   startTime = Sys.time()
   main_reg(10000)
   timeREG = difftime(Sys.time(), startTime, units=("secs"))[[1]]
@@ -238,12 +238,12 @@ library(Cairo)
 CairoPNG(filename ='Image/coclust_prot.png', width = 500, height = 500)
 # Posterior probabilities of co-clustering of prot 
 heatmap(dissimlar_ord_prot, Rowv = NA, Colv = NA, scale='none', 
-        labRow = FALSE, labCol = FALSE,
-        main="proteins prob coclust")
+        labRow = FALSE, labCol = FALSE)
+        # ,main="proteins prob coclust")
 invisible(dev.off())
 
 sPat <- read.csv("./Data-and-Results/sPat.txt", header=FALSE)
-# Leggi senza virgole
+
 colnames(sPat) = c("pat","cl")
 sPat[,"pat"]  = factor(sPat[,"pat"]) 
 Clust_pat_mat = matrix(NA, nrow=nrow(sPat)/R, ncol=R) 
