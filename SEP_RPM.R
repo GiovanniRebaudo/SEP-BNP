@@ -1,14 +1,17 @@
 # Codes accompanying "Separate Exchangeability as 
 # Modeling Principle in Bayesian Nonparametrics"
 
-# Load rel
-evant libraries, functions and data ----------------------------------
+# Load relevant libraries, functions and data ----------------------------------
 rm(list=ls())
 # Set the working directory to the current folder 
 # Code to set the working directory to the current folder from RStudio
-library(rstudioapi) # version 0.15
-setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+library(rstudioapi) # version 0.17.1
+current_path = dirname(rstudioapi::getActiveDocumentContext()$path)
+current_path
+setwd(current_path)
+getwd()
 
+rstudioapi::getActiveDocumentContext()$path
 
 library(DirichletReg)
 library(invgamma)
