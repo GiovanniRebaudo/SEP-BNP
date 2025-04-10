@@ -9,7 +9,7 @@
 ##                  clusters C[k], k=1..K
 ## OTUs,    b=1..B, cluster indicators M[b,k]
 ##                  clusters, D[k,l], l=1...L (nested in C[k])
-##          Note: in the notes the OTU index is "i" (=b :-)
+##          Note: in the notes the OTU ind<- is "i" (=b :-)
 ## cluster-specific pars {th[l]=(mu[l], sig2[l]); l=1..L[k]
 ##                      (common atoms across k)
 ## data:    y[bj], B x n matrix, row=OTU, col=subj
@@ -419,7 +419,7 @@ writeMCMC <- function(iter,pi,Sj,w,mki,mu,sig2,ll,pmki=rep(0,L),app=T)
 }
 
 niter=500; iter=0
-mcmc  <- function(niter=1000, pi, w, Sj, mki, mu, sig2, niter0=500)
+mcmc <- function(niter=1000, pi, w, Sj, mki, mu, sig2, niter0=500)
 {#### MCMC
   ## estimate Sj after niter0 iterations, and stop updating Sj
   last_ll=check.ll("update_w", lastll= -1e10, mu, sig2, Sj, mki, w, pi, post=T)-100000
@@ -1323,7 +1323,7 @@ pltLogl_reg = function()
 
 pltK_reg = function(d=1,traj=F)
 { # plot # clusters, d=1 for patients, d=2 for prot
-  nm = colnames(mcmc)
+  nm = colnames( <- )
   j1 = which(nm=="K.pat")
   j2 = which(nm=="K.prot")
   it = mcmc[,1]
