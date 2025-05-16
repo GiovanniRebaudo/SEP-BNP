@@ -341,10 +341,11 @@ ggsave(plot=PHeat, file="Image/mik_coclusterprob_sorted2.pdf",
 width=10, height=4.5)
 
 Point_Mki1 = salso::salso(t(mki[1,,]), nRuns = 100, 
+                          maxZealousAttempts = 100, loss=VI(),
+                          maxNClusters = 20)
+Point_Mki2 = salso::salso(t(mki[1,,]), nRuns = 100, maxNClusters = 20,
                           maxZealousAttempts = 100, loss=VI())
-Point_Mki2 = salso::salso(t(mki[1,,]), nRuns = 100, 
-                          maxZealousAttempts = 100, loss=VI())
-Point_Mki3 = salso::salso(t(mki[1,,]), nRuns = 100, 
+Point_Mki3 = salso::salso(t(mki[1,,]), nRuns = 100, maxNClusters = 20,
                           maxZealousAttempts = 100, loss=VI())
 
 Zmelts <- rbind(

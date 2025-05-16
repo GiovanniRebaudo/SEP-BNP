@@ -1323,7 +1323,7 @@ pltLogl_reg = function()
 
 pltK_reg = function(d=1,traj=F)
 { # plot # clusters, d=1 for patients, d=2 for prot
-  nm = colnames( <- )
+  nm = colnames(mcmc)
   j1 = which(nm=="K.pat")
   j2 = which(nm=="K.prot")
   it = mcmc[,1]
