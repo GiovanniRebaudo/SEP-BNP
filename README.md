@@ -6,7 +6,7 @@ R codes for separately exchangeable Bayesian nonparametric model.
 
 #### Overview
 
-This repository is associated with the article [Rebaudo, G., Lin Q. and Müller, P. (2024). Separate exchangeability as modeling principle in Bayesian nonparametrics.]()
+This repository is associated with the article Rebaudo, G., Lin Q. and Müller, P. (2026). Separate exchangeability as modeling principle in Bayesian nonparametrics. *Statistical Science*, forthcoming.
 The key contribution of the paper is outlined below.
 
 > [...] We argue for the use of separate exchangeability as a modeling principle in Bayesian nonparametric (BNP) inference.
@@ -29,4 +29,4 @@ The repository contains the following:
 
 #### Citation
 
-Please cite the following publication if you use this repository in your research: Rebaudo, G., Lin Q. and Müller, P. (2026). Separate exchangeability as modeling principle in Bayesian nonparametrics. Statistical Science, forthcoming.
+Please cite the following publication if you use this repository in your research: Rebaudo, G., Lin Q. and Müller, P. (2026). Separate exchangeability as modeling principle in Bayesian nonparametrics. *Statistical Science*, forthcoming.
