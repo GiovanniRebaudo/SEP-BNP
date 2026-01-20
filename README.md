@@ -15,7 +15,7 @@ The key contribution of the paper is outlined below.
 > We briefly review the definition of separate exchangeability, focusing on the implications of such a definition in Bayesian modeling.
 > We then discuss two tractable classes of models that implement separate exchangeability, which are the natural counterparts of familiar partially exchangeable BNP models.
 
-This repository provides codes to replicate the results in Rebaudo, G., Lin Q., and Müller, P. (2024). Separate exchangeability as modeling principle in Bayesian nonparametrics.
+This repository provides codes to replicate the results in Rebaudo, G., Lin Q., and Müller, P. (2026). Separate exchangeability as modeling principle in Bayesian nonparametrics. *Statistical Science*, forthcoming.
 
 In particular, we provide the `R` code to implement the MCMC to perform posterior inference under the GARP model.
 
